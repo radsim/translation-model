@@ -48,24 +48,17 @@ plugins {
 }
 
 group = "de.radsim"
-version = "1.0.0-alpha1" // Automatically overwritten by CI
+version = "0.0.0" // Automatically overwritten by CI
 
 // --- Dependency Versions ---
 
 extra["gradleWrapperVersion"] = "7.6.1"
-//extra["commonsLangVersion"] = "3.12.0"
-//extra["logbackVersion"] = "1.4.6"
 extra["cyfaceBackendVersion"] = "6.1.6"
-
-// FIXME: Remove
-//extra["slf4jVersion"] = "1.7.29"
 
 // Versions of testing dependencies
 extra["junitVersion"] = "5.9.2"
-//extra["mockitoVersion"] = "5.7.0"
 extra["mockitoKotlinVersion"] = "5.1.0"
 extra["hamcrestVersion"] = "2.2"
-extra["flapdoodleVersion"] = "3.5.3" // major upgrade available
 
 // Versions of Code management dependencies
 extra["dokkaVersion"] = "1.9.10"
@@ -102,14 +95,6 @@ dependencies {
     // Kotlin Support
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
 
-    // Logging
-    //implementation("ch.qos.logback:logback-classic:${project.extra["logbackVersion"]}")
-    //implementation("ch.qos.logback:logback-core:${project.extra["logbackVersion"]}")
-    //implementation("org.slf4j:slf4j-api:${project.extra["slf4jVersion"]}")
-
-    // Utility
-    //implementation "org.apache.commons:commons-lang3:$commonsLangVersion"
-
     // Cyface Dependencies
     implementation("de.cyface:map-matching:${project.extra["cyfaceBackendVersion"]}") // OsmTag class
 
@@ -118,8 +103,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.junit.jupiter:junit-jupiter-params") // Required for parameterized tests
     testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
-    //testImplementation("org.mockito:mockito-core:${project.extra["mockitoVersion"]}")
-    //testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${project.extra["mockitoKotlinVersion"]}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.22")
