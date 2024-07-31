@@ -30,7 +30,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        //classpath("net.sf.proguard:proguard-gradle:6.2.2")
         classpath("org.jetbrains.dokka:dokka-base:1.9.0")
     }
 }
