@@ -36,7 +36,6 @@ buildscript {
 
 plugins {
     id("idea")
-    id("com.github.johnrengelman.shadow").version("7.1.2")
     // Plugin to display the Gradle task graph
     id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
