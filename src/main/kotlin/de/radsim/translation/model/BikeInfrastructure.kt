@@ -19,20 +19,15 @@ package de.radsim.translation.model
  *   This codes does not yet check for this `forward/backward`, `one_way=true` and geometry direction issue.
  *
  * @property value The value for the RadSim infrastructure type tag.
- * @property backMappingType The simplified infrastructure type that this detail maps to.
+ * @property simplified The simplified infrastructure type which should be shown to the client for this detailed type.
+ *                      - `*_mit|_no`: Return first part, e.g. `bicycle_way_right_no_left` => `bicycle_way`
+ *                      - `*_left_*_right|*_right_*_left`: Return the hierarchically higher type for now (workaround):
+ *                        ... > bicycle_way > bicycle_lane > bus_lane > mixed_way > ...
  */
-enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMappingType: SimplifiedBikeInfrastructure) {
-    // FIXME: check the back-mapping (generated / guessed)
-    // - mit/no => always use the first part, e.g. `bicycle_way_right_no_left` = `bicycle_way`
-    // - later, the UI and mapping should handle both directions separately:
-    //  `bicycle_way_right_lane_left` should be
-    //  a) shown in the UI and Map as `bicycle_way` right, `lane` left
-    //  b) the user should be able to change both sides individually
-    //  c) the back-mapping merges both directions into one or multiple tags (or maybe even splits the geometry)
-    //     But this then needs to take the forward/backend, one-way and formal direction into account.
-
-    // Service
-    SERVICE_MISC("ServiceMisc", SimplifiedBikeInfrastructure.SERVICE_MISC),
+enum class BikeInfrastructure(
+    val value: String,
+    @Suppress("MemberVisibilityCanBePrivate") val simplified: SimplifiedBikeInfrastructure // Part of the API
+) {
 
     // Cycle highway
     CYCLE_HIGHWAY("CycleHighway", SimplifiedBikeInfrastructure.CYCLE_HIGHWAY),
@@ -40,41 +35,33 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
     // Bicycle road
     BICYCLE_ROAD("BicycleRoad", SimplifiedBikeInfrastructure.BICYCLE_ROAD),
 
-    // Bicycle way (both sides)
+    // Bicycle way
     BICYCLE_WAY_BOTH("BicycleWayBoth", SimplifiedBikeInfrastructure.BICYCLE_WAY),
-
-    // Bicycle way (right side)
     BICYCLE_WAY_RIGHT_LANE_LEFT("BicycleWayRightLaneLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
     BICYCLE_WAY_RIGHT_BUS_LEFT("BicycleWayRightBusLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
     BICYCLE_WAY_RIGHT_MIXED_LEFT("BicycleWayRightMixedLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
     BICYCLE_WAY_RIGHT_MIT_LEFT("BicycleWayRightMitLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
     BICYCLE_WAY_RIGHT_PEDESTRIAN_LEFT("BicycleWayRightPedestrianLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
     BICYCLE_WAY_RIGHT_NO_LEFT("BicycleWayRightNoLeft", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_LANE_RIGHT("BicycleWayLeftLaneRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_BUS_RIGHT("BicycleWayLeftBusRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_MIXED_RIGHT("BicycleWayLeftMixedRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_MIT_RIGHT("BicycleWayLeftMitRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_PEDESTRIAN_RIGHT("BicycleWayLeftPedestrianRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
+    BICYCLE_WAY_LEFT_NO_RIGHT("BicycleWayLeftNoRight", SimplifiedBikeInfrastructure.BICYCLE_WAY),
 
-    // Bicycle way (left side)
-    BICYCLE_WAY_LEFT_LANE_RIGHT("BicycleWayLeftLaneRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
-    BICYCLE_WAY_LEFT_BUS_RIGHT("BicycleWayLeftBusRight", SimplifiedBikeInfrastructure.BUS_LANE),
-    BICYCLE_WAY_LEFT_MIXED_RIGHT("BicycleWayLeftMixedRight", SimplifiedBikeInfrastructure.MIXED_WAY),
-    BICYCLE_WAY_LEFT_MIT_RIGHT("BicycleWayLeftMitRight", SimplifiedBikeInfrastructure.MIT_ROAD),
-    BICYCLE_WAY_LEFT_PEDESTRIAN_RIGHT("BicycleWayLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
-    BICYCLE_WAY_LEFT_NO_RIGHT("BicycleWayLeftNoRight", SimplifiedBikeInfrastructure.NO),
-
-    // Bicycle lane (both sides)
+    // Bicycle lane
     BICYCLE_LANE_BOTH("BicycleLaneBoth", SimplifiedBikeInfrastructure.BICYCLE_LANE),
-
-    // Bicycle lane (right side)
     BICYCLE_LANE_RIGHT_BUS_LEFT("BicycleLaneRightBusLeft", SimplifiedBikeInfrastructure.BICYCLE_LANE),
     BICYCLE_LANE_RIGHT_MIXED_LEFT("BicycleLaneRightMixedLeft", SimplifiedBikeInfrastructure.BICYCLE_LANE),
     BICYCLE_LANE_RIGHT_MIT_LEFT("BicycleLaneRightMitLeft", SimplifiedBikeInfrastructure.BICYCLE_LANE),
     BICYCLE_LANE_RIGHT_PEDESTRIAN_LEFT("BicycleLaneRightPedestrianLeft", SimplifiedBikeInfrastructure.BICYCLE_LANE),
     BICYCLE_LANE_RIGHT_NO_LEFT("BicycleLaneRightNoLeft", SimplifiedBikeInfrastructure.BICYCLE_LANE),
-
-    // Bicycle lane (left side)
-    BICYCLE_LANE_LEFT_BUS_RIGHT("BicycleLaneLeftBusRight", SimplifiedBikeInfrastructure.BUS_LANE),
-    BICYCLE_LANE_LEFT_MIXED_RIGHT("BicycleLaneLeftMixedRight", SimplifiedBikeInfrastructure.MIXED_WAY),
-    BICYCLE_LANE_LEFT_MIT_RIGHT("BicycleLaneLeftMitRight", SimplifiedBikeInfrastructure.MIT_ROAD),
-    BICYCLE_LANE_LEFT_PEDESTRIAN_RIGHT("BicycleLaneLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
-    BICYCLE_LANE_LEFT_NO_RIGHT("BicycleLaneLeftNoRight", SimplifiedBikeInfrastructure.NO),
+    BICYCLE_LANE_LEFT_BUS_RIGHT("BicycleLaneLeftBusRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
+    BICYCLE_LANE_LEFT_MIXED_RIGHT("BicycleLaneLeftMixedRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
+    BICYCLE_LANE_LEFT_MIT_RIGHT("BicycleLaneLeftMitRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
+    BICYCLE_LANE_LEFT_PEDESTRIAN_RIGHT("BicycleLaneLeftPedestrianRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
+    BICYCLE_LANE_LEFT_NO_RIGHT("BicycleLaneLeftNoRight", SimplifiedBikeInfrastructure.BICYCLE_LANE),
 
     // Bus lanes
     BUS_LANE_BOTH("BusLaneBoth", SimplifiedBikeInfrastructure.BUS_LANE),
@@ -82,36 +69,39 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
     BUS_LANE_RIGHT_MIT_LEFT("BusLaneRightMitLeft", SimplifiedBikeInfrastructure.BUS_LANE),
     BUS_LANE_RIGHT_PEDESTRIAN_LEFT("BusLaneRightPedestrianLeft", SimplifiedBikeInfrastructure.BUS_LANE),
     BUS_LANE_RIGHT_NO_LEFT("BusLaneRightNoLeft", SimplifiedBikeInfrastructure.BUS_LANE),
-
-    BUS_LANE_LEFT_MIXED_RIGHT("BusLaneLeftMixedRight", SimplifiedBikeInfrastructure.MIXED_WAY),
-    BUS_LANE_LEFT_MIT_RIGHT("BusLaneLeftMitRight", SimplifiedBikeInfrastructure.MIT_ROAD),
-    BUS_LANE_LEFT_PEDESTRIAN_RIGHT("BusLaneLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
-    BUS_LANE_LEFT_NO_RIGHT("BusLaneLeftNoRight", SimplifiedBikeInfrastructure.NO),
+    BUS_LANE_LEFT_MIXED_RIGHT("BusLaneLeftMixedRight", SimplifiedBikeInfrastructure.BUS_LANE),
+    BUS_LANE_LEFT_MIT_RIGHT("BusLaneLeftMitRight", SimplifiedBikeInfrastructure.BUS_LANE),
+    BUS_LANE_LEFT_PEDESTRIAN_RIGHT("BusLaneLeftPedestrianRight", SimplifiedBikeInfrastructure.BUS_LANE),
+    BUS_LANE_LEFT_NO_RIGHT("BusLaneLeftNoRight", SimplifiedBikeInfrastructure.BUS_LANE),
 
     // Mixed ways
     MIXED_WAY_BOTH("MixedWayBoth", SimplifiedBikeInfrastructure.MIXED_WAY),
     MIXED_WAY_RIGHT_MIT_LEFT("MixedWayRightMitLeft", SimplifiedBikeInfrastructure.MIXED_WAY),
     MIXED_WAY_RIGHT_PEDESTRIAN_LEFT("MixedWayRightPedestrianLeft", SimplifiedBikeInfrastructure.MIXED_WAY),
     MIXED_WAY_RIGHT_NO_LEFT("MixedWayRightNoLeft", SimplifiedBikeInfrastructure.MIXED_WAY),
+    MIXED_WAY_LEFT_MIT_RIGHT("MixedWayLeftMitRight", SimplifiedBikeInfrastructure.MIXED_WAY),
+    MIXED_WAY_LEFT_PEDESTRIAN_RIGHT("MixedWayLeftPedestrianRight", SimplifiedBikeInfrastructure.MIXED_WAY),
+    MIXED_WAY_LEFT_NO_RIGHT("MixedWayLeftNoRight", SimplifiedBikeInfrastructure.MIXED_WAY),
 
-    MIXED_WAY_LEFT_MIT_RIGHT("MixedWayLeftMitRight", SimplifiedBikeInfrastructure.MIT_ROAD),
-    MIXED_WAY_LEFT_PEDESTRIAN_RIGHT("MixedWayLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
-    MIXED_WAY_LEFT_NO_RIGHT("MixedWayLeftNoRight", SimplifiedBikeInfrastructure.NO),
+    // The following 4 sections + [NO] are represented by [NO] from client-perspective (only shown/selectable):
+    // [SERVICE_MISC, MIT_ROAD, PEDESTRIAN, PATH_NOT_FORBIDDEN]
+
+    // Service
+    SERVICE_MISC("ServiceMisc", SimplifiedBikeInfrastructure.NO),
 
     // MIT roads
     MIT_ROAD_BOTH("MitRoadBoth", SimplifiedBikeInfrastructure.NO),
     MIT_ROAD_RIGHT_PEDESTRIAN_LEFT("MitRoadRightPedestrianLeft", SimplifiedBikeInfrastructure.NO),
     MIT_ROAD_RIGHT_NO_LEFT("MitRoadRightNoLeft", SimplifiedBikeInfrastructure.NO),
-
     MIT_ROAD_LEFT_PEDESTRIAN_RIGHT("MitRoadLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
     MIT_ROAD_LEFT_NO_RIGHT("MitRoadLeftNoRight", SimplifiedBikeInfrastructure.NO),
 
-    // Pedestrian paths
+    // Pedestrian
     PEDESTRIAN_BOTH("PedestrianBoth", SimplifiedBikeInfrastructure.NO),
     PEDESTRIAN_RIGHT_NO_LEFT("PedestrianRightNoLeft", SimplifiedBikeInfrastructure.NO),
     PEDESTRIAN_LEFT_NO_RIGHT("PedestrianLeftNoRight", SimplifiedBikeInfrastructure.NO),
 
-    // Path not forbidden
+    // Path
     PATH_NOT_FORBIDDEN("PathNotForbidden", SimplifiedBikeInfrastructure.NO),
 
     // Default
@@ -182,9 +172,6 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
 
         /**
          * All OSM Tag values used to determine the RadSim infrastructure type.
-         *
-         * This list is used to ensure we use a null-like value in the first step of the simplified back-mapping
-         * to ensure that this null-like value does not influence the forward-mapping.
          */
         @Suppress("SpellCheckingInspection")
         enum class OsmValue(val value: String) {
@@ -207,15 +194,6 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
             MOTORWAY("motorway"),
             MOTORWAY_LINK("motorway_link"),
             NO("no"),
-
-            /**
-             * A special value only used for internal purposes in the simplified back-mapping to nullify the tags used
-             * for mapping [BikeInfrastructure] so we can only set the tags used to reach a specific RadSim category.
-             *
-             * For more details see [SimplifiedBikeInfrastructure].
-             */
-            NULL__ONLY_USED_INTERNALLY("null"),
-
             PATH("path"),
             PEDESTRIAN("pedestrian"),
             PRIMARY("primary"),
@@ -256,7 +234,9 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount")
         fun toRadSim(tags: Map<String, Any>): BikeInfrastructure {
             // Map to complex categories, separating right and left as required for OSM to Radsim mapping
-            if (tags.containsValue(OsmTag.ACCESS.key) && isNotAccessible(tags) || tags[OsmTag.TRAM.key] == OsmValue.YES.value) {
+            if (tags.containsValue(OsmTag.ACCESS.key) && isNotAccessible(tags)
+                || tags[OsmTag.TRAM.key] == OsmValue.YES.value
+            ) {
                 return NO // unpacked from `service`
             }
 
@@ -381,7 +361,7 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
 
         // `bicycle_way`
 
-        private fun bicycleWayRight (tags: Map<String, Any>) : Boolean {
+        private fun bicycleWayRight(tags: Map<String, Any>): Boolean {
             return listOf(
                 isBikePathRight(tags) && !canWalkRight(tags), // 0 and 1
                 isBikePathRight(tags) && isSegregated(tags), // 0 and 2
@@ -393,7 +373,7 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
             ).any { it }
         }
 
-        private fun bicycleWayLeft (tags: Map<String, Any>) : Boolean {
+        private fun bicycleWayLeft(tags: Map<String, Any>): Boolean {
             return listOf(
                 isBikePathLeft(tags) && !canWalkLeft(tags), // 0 and 1
                 isBikePathLeft(tags) && isSegregated(tags), // 0 and 2
@@ -402,21 +382,21 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
                 canBike(tags) && (isTrack(tags) || isFootpath(tags) || isPath(tags)) && isSegregated(tags),
                 canBike(tags) && isObligatedSegregated(tags), // 3,7
                 isBicycleDesignatedLeft(tags) && isPedestrianDesignatedLeft(tags) && isSegregated(tags)
-            ).any{ it }
+            ).any { it }
         }
 
         // `mixed_way`
 
-        private fun mixedWayRight (tags: Map<String, Any>) : Boolean{
+        private fun mixedWayRight(tags: Map<String, Any>): Boolean {
             return listOf(
                 isBikePathRight(tags) && canWalkRight(tags) && !isSegregated(tags), // 0 and 1 and 2
                 isFootpath(tags) && canBike(tags) && !isSegregated(tags), // 3 and 4 and 2
                 // 5 and 4 and 1 and 2
                 (isPath(tags) || isTrack(tags)) && canBike(tags) && canWalkRight(tags) && !isSegregated(tags)
-            ).any{ it }
+            ).any { it }
         }
 
-        private fun mixedWayLeft (tags: Map<String, Any>) : Boolean {
+        private fun mixedWayLeft(tags: Map<String, Any>): Boolean {
             return listOf(
                 isBikePathLeft(tags) && canWalkLeft(tags) && !isSegregated(tags), // 0 and 1 and 2
                 isFootpath(tags) && canBike(tags) && !isSegregated(tags), // 3 and 4 and 2
@@ -428,20 +408,20 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         // `mit_road` - both, cars and bikes are allowed, but no dedicated bike infrastructure
         // MIT is used as an abbreviation for _motorized transport_
 
-        private fun mitRoadRight (tags: Map<String, Any>) : Boolean {
+        private fun mitRoadRight(tags: Map<String, Any>): Boolean {
             return listOf(
                 canCarDrive(tags) && !isBikePathRight(tags) && !isBikeRoad(tags) && !isFootpath(tags)
                         && !isBikeLaneRight(tags) && !isBusLaneRight(tags) && !isPath(tags) && !isTrack(tags)
                         && !cannotBike(tags)
-            ).any{ it }
+            ).any { it }
         }
 
-        private fun mitRoadLeft (tags: Map<String, Any>) : Boolean {
+        private fun mitRoadLeft(tags: Map<String, Any>): Boolean {
             return listOf(
                 canCarDrive(tags) && !isBikePathLeft(tags) && !isBikeRoad(tags) && !isFootpath(tags)
                         && !isBikeLaneLeft(tags) && !isBusLaneLeft(tags) && !isPath(tags) && !isTrack(tags)
                         && !cannotBike(tags)
-            ).any{ it }
+            ).any { it }
         }
 
         private val isSegregated: (Map<String, Any>) -> Boolean = { tags ->
@@ -470,18 +450,58 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
 
         private val canWalkRight: (Map<String, Any>) -> Boolean = { tags ->
             tags[OsmTag.FOOT.key] in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) ||
-                    tags.any { (key, value) -> OsmTag.RIGHT_FOOT.key in key && value in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) } ||
-                    tags[OsmTag.SIDEWALK.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value, OsmValue.RIGHT.value, OsmValue.LEFT.value) ||
-                    tags[OsmTag.SIDEWALK_RIGHT.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value, OsmValue.RIGHT.value) ||
-                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value)
+                    tags.any { (key, value) ->
+                        OsmTag.RIGHT_FOOT.key in key && value in listOf(
+                            OsmValue.YES.value,
+                            OsmValue.DESIGNATED.value
+                        )
+                    } ||
+                    tags[OsmTag.SIDEWALK.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value,
+                OsmValue.RIGHT.value,
+                OsmValue.LEFT.value
+            ) ||
+                    tags[OsmTag.SIDEWALK_RIGHT.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value,
+                OsmValue.RIGHT.value
+            ) ||
+                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value
+            )
         }
 
         private val canWalkLeft: (Map<String, Any>) -> Boolean = { tags ->
             tags[OsmTag.FOOT.key] in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) ||
-                    tags.any { (key, value) -> OsmTag.LEFT_FOOT.key in key && value in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) } ||
-                    tags[OsmTag.SIDEWALK.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value, OsmValue.RIGHT.value, OsmValue.LEFT.value) ||
-                    tags[OsmTag.SIDEWALK_LEFT.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value, OsmValue.LEFT.value) ||
-                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value)
+                    tags.any { (key, value) ->
+                        OsmTag.LEFT_FOOT.key in key && value in listOf(
+                            OsmValue.YES.value,
+                            OsmValue.DESIGNATED.value
+                        )
+                    } ||
+                    tags[OsmTag.SIDEWALK.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value,
+                OsmValue.RIGHT.value,
+                OsmValue.LEFT.value
+            ) ||
+                    tags[OsmTag.SIDEWALK_LEFT.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value,
+                OsmValue.LEFT.value
+            ) ||
+                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(
+                OsmValue.YES.value,
+                OsmValue.SEPARATED.value,
+                OsmValue.BOTH.value
+            )
         }
 
         private val canBike: (Map<String, Any>) -> Boolean = { tags ->
@@ -490,8 +510,18 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         }
 
         private val cannotBike: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.BICYCLE.key] in listOf(OsmValue.NO.value, OsmValue.DISMOUNT.value, OsmValue.USE_SIDE_PATH.value) ||
-                    tags[OsmTag.HIGHWAY.key] in listOf(OsmValue.CORRIDOR.value, OsmValue.MOTORWAY.value, OsmValue.MOTORWAY_LINK.value, OsmValue.TRUNK.value, OsmValue.TRUNK_LINK.value) ||
+            tags[OsmTag.BICYCLE.key] in listOf(
+                OsmValue.NO.value,
+                OsmValue.DISMOUNT.value,
+                OsmValue.USE_SIDE_PATH.value
+            ) ||
+                    tags[OsmTag.HIGHWAY.key] in listOf(
+                OsmValue.CORRIDOR.value,
+                OsmValue.MOTORWAY.value,
+                OsmValue.MOTORWAY_LINK.value,
+                OsmValue.TRUNK.value,
+                OsmValue.TRUNK_LINK.value
+            ) ||
                     tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value
         }
 
@@ -508,19 +538,25 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         }
 
         private val isBicycleDesignatedLeft: (Map<String, Any>) -> Boolean = { tags ->
-            isDesignated(tags) || tags[OsmTag.CYCLEWAY_LEFT_BICYCLE.key] == OsmValue.DESIGNATED.value || tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
+            isDesignated(tags) || tags[OsmTag.CYCLEWAY_LEFT_BICYCLE.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
         }
 
         private val isBicycleDesignatedRight: (Map<String, Any>) -> Boolean = { tags ->
-            isDesignated(tags) || tags[OsmTag.CYCLEWAY_RIGHT_BICYCLE.key] == OsmValue.DESIGNATED.value || tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
+            isDesignated(tags) || tags[OsmTag.CYCLEWAY_RIGHT_BICYCLE.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
         }
 
         private val isPedestrianDesignatedLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value || tags[OsmTag.SIDEWALK_LEFT_FOOT.key] == OsmValue.DESIGNATED.value || tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
+            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.SIDEWALK_LEFT_FOOT.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
         }
 
         private val isPedestrianDesignatedRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value || tags[OsmTag.SIDEWALK_RIGHT_FOOT.key] == OsmValue.DESIGNATED.value || tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
+            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.SIDEWALK_RIGHT_FOOT.key] == OsmValue.DESIGNATED.value ||
+                    tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
         }
 
         private val isServiceTag: (Map<String, Any>) -> Boolean = { tags ->
@@ -574,27 +610,59 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         }
 
         val isPathNotForbidden: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] in listOf(OsmValue.CYCLEWAY.value, OsmValue.TRACK.value, OsmValue.PATH.value) && !cannotBike(tags)
+            tags[OsmTag.HIGHWAY.key] in listOf(
+                OsmValue.CYCLEWAY.value,
+                OsmValue.TRACK.value,
+                OsmValue.PATH.value
+            ) && !cannotBike(tags)
         }
 
         private val isBikePathRight: (Map<String, Any>) -> Boolean = { tags ->
             tags[OsmTag.HIGHWAY.key] == OsmValue.CYCLEWAY.value ||
-                    tags.any { (key, value) -> OsmTag.RIGHT_BICYCLE.key in key && value == OsmValue.DESIGNATED.value } &&
+                    tags.any { (key, value) ->
+                        OsmTag.RIGHT_BICYCLE.key in key && value == OsmValue.DESIGNATED.value
+                    } &&
                     tags.none { (key, _) -> key == OsmTag.CYCLEWAY_RIGHT_LANE.key } ||
-                    tags[OsmTag.CYCLEWAY.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags.any { (key, value) -> OsmTag.RIGHT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value }
+                    tags[OsmTag.CYCLEWAY.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) ||
+                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) || tags.any { (key, value) ->
+                OsmTag.RIGHT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
+            }
         }
 
         private val isBikePathLeft: (Map<String, Any>) -> Boolean = { tags ->
             tags[OsmTag.HIGHWAY.key] == OsmValue.CYCLEWAY.value ||
                     tags.any { (key, value) -> OsmTag.LEFT_BICYCLE.key in key && value == OsmValue.DESIGNATED.value } &&
                     tags.none { (key, _) -> key == OsmTag.CYCLEWAY_LEFT_LANE.key } ||
-                    tags[OsmTag.CYCLEWAY.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value) ||
-                    tags.any { (key, value) -> OsmTag.LEFT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value }
+                    tags[OsmTag.CYCLEWAY.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) ||
+                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(
+                OsmValue.TRACK.value,
+                OsmValue.SIDE_PATH.value,
+                OsmValue.CROSSING.value
+            ) || tags.any { (key, value) ->
+                OsmTag.LEFT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
+            }
         }
 
         val isPedestrianRight: (Map<String, Any>) -> Boolean = { tags ->
@@ -630,12 +698,14 @@ enum class BikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMapp
         }
 
         val isBusLaneRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value || tags[OsmTag.CYCLEWAY_RIGHT.key] == OsmValue.SHARE_BUS_WAY.value
+            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value ||
+                    tags[OsmTag.CYCLEWAY_RIGHT.key] == OsmValue.SHARE_BUS_WAY.value
                     || tags[OsmTag.CYCLEWAY_BOTH.key] == OsmValue.SHARE_BUS_WAY.value
         }
 
         val isBusLaneLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value || tags[OsmTag.CYCLEWAY_LEFT.key] == OsmValue.SHARE_BUS_WAY.value
+            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value ||
+                    tags[OsmTag.CYCLEWAY_LEFT.key] == OsmValue.SHARE_BUS_WAY.value
                     || tags[OsmTag.CYCLEWAY_BOTH.key] == OsmValue.SHARE_BUS_WAY.value
         }
     }

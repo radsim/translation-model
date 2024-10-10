@@ -33,8 +33,13 @@ import de.cyface.model.osm.OsmTag
  *   relevant for the [SimplifiedBikeInfrastructure] to a value which results into the newly selected category.
  *   This ensures our hierarchical mapping does not return early with another category.
  * - We'll then switch to a Matrix-lookup "what OSM tags are needed to switch from category 4 to 6".
- * - We might then handle left/right separately (in OSM and UI) but need to consider for-/backward and the direction
- *   in which the geometry is defined. "Right" can mean "forward" if defined in the opposite direction.
+ *   The UI and mapping then handles both directions separately, e.g. `bicycle_way_right_lane_left` should be:
+ *     a) shown in the UI and Map as `bicycle_way` right, `lane` left
+ *     b) the user should be able to change both sides individually
+ *     c) the back-mapping merges both directions into one or multiple tags (or maybe even splits the geometry)
+ *        But this then needs to take the forward/backend, one-way and formal direction into account.
+ *   But we then need to consider for-/backward, the formal/geometry direction and `one-way=yes`.
+ *   I.e. "right" can mean "forward" if defined in the opposite direction.
  *   Please check out: https://wiki.openstreetmap.org/wiki/Forward_%26_backward,_left_%26_right
  *
  * The back-mapping will also be relevant for the feature where the user can update the road network state.
@@ -57,38 +62,32 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
     BICYCLE_ROAD("BicycleRoad", setOf(OsmTag("bicycle_road", "yes"))),
 
     /**
-     * Infrastructure type where bikes have their own track without any other traffic nearby. FIXME
+     * Infrastructure type where bicycles have an exclusive track, segregated from other traffic.
      */
     BICYCLE_WAY("BicycleWay", setOf(OsmTag("highway", "cycleway"), OsmTag("segregated", "yes"))),
 
     /**
-     * Infrastructure type where bikes have their own lane. FIXME
+     * Infrastructure type where bicycles have a designated lane on the road.
      */
     BICYCLE_LANE("BicycleLane", setOf(OsmTag("cycleway", "lane"))),
 
     /**
-     * Infrastructure type where bikes use a bus lane. FIXME
+     * Infrastructure type where bicycles share a lane with buses.
      */
     @Suppress("SpellCheckingInspection")
     BUS_LANE("BusLane", setOf(OsmTag("cycleway", "share_busway"))),
 
     /**
-     * Infrastructure type where bikes share their lane with other traffic forms. FIXME
+     * Infrastructure type where bicycles share a lane with pedestrians or other traffic.
      */
     MIXED_WAY("MixedWay", setOf(OsmTag("highway", "footway"), OsmTag("bicycle", "yes"))),
 
     /**
      * Infrastructure type where no bike infrastructure is available.
+     *
+     * Includes the sub-categories `MISC_SERVICE`, `MIT_ROAD`, `PEDESTRIAN` and `PATH_NOT_FORBIDDEN`
      */
     NO("No", setOf(OsmTag("highway", "service"))),
-
-    // These 4 categories are sub-categories of [NO], maybe including [NO] itself.
-    // They only exist for mapping but are aggregated as [NO] in the client and only [NO] can be selected in the client.
-    // FIXME See if these "no" can be in here - or remove if we remove DetailedBI.backMappingType
-    SERVICE_MISC("ServiceMisc", NO.backMappingTag),
-    MIT_ROAD("MitRoad", NO.backMappingTag),
-    PEDESTRIAN("Pedestrian", NO.backMappingTag),
-    PATH_NOT_FORBIDDEN("PathNotForbidden", NO.backMappingTag),
     ;
 
     companion object {
@@ -96,80 +95,5 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
          * The RadSim tag used to store the simplified infrastructure type (6 categories + "no").
          */
         const val RADSIM_TAG = "roadStyleSimplified"
-
-        /**
-         * Find the infrastructure type based on the provided OSM tags.
-         *
-         * This method checks specific OSM tags hierarchically and returns the first match.
-         *
-         * @param tags The tags to search for the infrastructure type.
-         * @return The infrastructure type based on the provided tags.
-         * /
-        // We keep the method structure to be easier comparable with the mapping from TUD:
-        // https://github.com/1prk/osm_categorizer/blob/radsim/netapy/assessor_free.py
-        @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount")
-        fun toRadSim(tags: Map<String, String>): SimplifiedBikeInfrastructure {
-            // Check if access is restricted or if there is a tram
-            if ((tags.containsValue("access") && isNotAccessible(tags)) || (tags["tram"] == "yes")) {
-                return NO // Unpacked from "service"
-            }
-
-            // Check if it's a service road
-            if (isService(tags)) {
-                return SERVICE_MISC
-            }
-
-            // Check if it's a cycle highway
-            if (isCycleHighway(tags)) {
-                return CYCLE_HIGHWAY
-            }
-
-            // Check if it's a bicycle road
-            if (isBikeRoad(tags)) {
-                return BICYCLE_ROAD
-            }
-
-            // Check for bicycle way (left or right)
-            if (bicycleWayLeft(tags) || bicycleWayRight(tags)) {
-                return BICYCLE_WAY
-            }
-
-            // Check for bicycle lane (left or right)
-            if (isBikeLaneLeft(tags) || isBikeLaneRight(tags)) {
-                return BICYCLE_LANE
-            }
-
-            // Check for bus lane (left or right)
-            if (isBusLaneLeft(tags) || isBusLaneRight(tags)) {
-                return BUS_LANE
-            }
-
-            // Check for mixed way (left or right)
-            if (mixedWayLeft(tags) || mixedWayRight(tags)) {
-                return MIXED_WAY
-            }
-
-            // Check for motorized transport (MIT) road (left or right)
-            if (mitRoadLeft(tags) || mitRoadRight(tags)) {
-                return MIT_ROAD
-            }
-
-            // Check for pedestrian path (left or right) and not indoor
-            if ((isPedestrianLeft(tags) || isPedestrianRight(tags)) && (tags["indoor"] != "yes")) {
-                return if (tags["access"] == "customers") {
-                    NO
-                } else {
-                    PEDESTRIAN
-                }
-            }
-
-            // Check if path is not forbidden
-            if (isPathNotForbidden(tags)) {
-                return PATH_NOT_FORBIDDEN
-            }
-
-            // Fallback to "no"
-            return NO
-        }*/
     }
 }
