@@ -8,18 +8,28 @@ package de.radsim.translation.model
  * - e.g. a road with a bicycle lane on the right
  *
  * The [DetailedBikeInfrastructure] includes can be used to map from OSM to Radsim tags.
- * For back-mapping (Radsim to OSM) we currently use a [SimplifiedBikeInfrastructure].
+ * For back-mapping (Radsim to OSM) we currently use [SimplifiedBikeInfrastructure].
  *
  * Notes:
  * - The mapping assumes cyclists only use the infrastructure as allowed (German "STVO").
+ * - The OSM mapping community uses "left/right" also in cases where "forward/backward" would be correct.
+ *   Because of this, it's intentional, that both `bicycle_way_right_no_left` and `bicycle_way_left_no_right`
+ *   are simplified to `bicycle_way` as the geometry might be fined opposite to the travel direction.
+ *   See [SimplifiedBikeInfrastructure] description for more details.
+ *   This codes does not yet check for this `forward/backward`, `one_way=true` and geometry direction issue.
  *
  * @property value The value for the RadSim infrastructure type tag.
  * @property backMappingType The simplified infrastructure type that this detail maps to.
  */
-enum class DetailedBikeInfrastructure(val value: String, val backMappingType: SimplifiedBikeInfrastructure) {
+enum class DetailedBikeInfrastructure(val value: String, /*FIXME: REMOVE */ val backMappingType: SimplifiedBikeInfrastructure) {
     // FIXME: check the back-mapping (generated / guessed)
-    // Ask this in a Telco but maybe based on test cases, so the use-cases are clearer
-    // ! Maybe we do not even need a mapping from Detailed to Simplified !
+    // - mit/no => always use the first part, e.g. `bicycle_way_right_no_left` = `bicycle_way`
+    // - later, the UI and mapping should handle both directions separately:
+    //  `bicycle_way_right_lane_left` should be
+    //  a) shown in the UI and Map as `bicycle_way` right, `lane` left
+    //  b) the user should be able to change both sides individually
+    //  c) the back-mapping merges both directions into one or multiple tags (or maybe even splits the geometry)
+    //     But this then needs to take the forward/backend, one-way and formal direction into account.
 
     // Service
     SERVICE_MISC("ServiceMisc", SimplifiedBikeInfrastructure.SERVICE_MISC),
@@ -89,15 +99,15 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
     MIXED_WAY_LEFT_NO_RIGHT("MixedWayLeftNoRight", SimplifiedBikeInfrastructure.NO),
 
     // MIT roads
-    MIT_ROAD_BOTH("MitRoadBoth", SimplifiedBikeInfrastructure.MIT_ROAD),
-    MIT_ROAD_RIGHT_PEDESTRIAN_LEFT("MitRoadRightPedestrianLeft", SimplifiedBikeInfrastructure.MIT_ROAD),
-    MIT_ROAD_RIGHT_NO_LEFT("MitRoadRightNoLeft", SimplifiedBikeInfrastructure.MIT_ROAD),
+    MIT_ROAD_BOTH("MitRoadBoth", SimplifiedBikeInfrastructure.NO), // both = definitely "no"
+    MIT_ROAD_RIGHT_PEDESTRIAN_LEFT("MitRoadRightPedestrianLeft", SimplifiedBikeInfrastructure.NO),
+    MIT_ROAD_RIGHT_NO_LEFT("MitRoadRightNoLeft", SimplifiedBikeInfrastructure.NO),
 
     MIT_ROAD_LEFT_PEDESTRIAN_RIGHT("MitRoadLeftPedestrianRight", SimplifiedBikeInfrastructure.NO),
     MIT_ROAD_LEFT_NO_RIGHT("MitRoadLeftNoRight", SimplifiedBikeInfrastructure.NO),
 
     // Pedestrian paths
-    PEDESTRIAN_BOTH("PedestrianBoth", SimplifiedBikeInfrastructure.NO),
+    PEDESTRIAN_BOTH("PedestrianBoth", SimplifiedBikeInfrastructure.NO), // both = definitely "no"
     PEDESTRIAN_RIGHT_NO_LEFT("PedestrianRightNoLeft", SimplifiedBikeInfrastructure.NO),
     PEDESTRIAN_LEFT_NO_RIGHT("PedestrianLeftNoRight", SimplifiedBikeInfrastructure.NO),
 
@@ -116,23 +126,64 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
         const val RADSIM_TAG = "roadStyle"
 
         /**
-         * The specific OSM tags that are used to determine the RadSim infrastructure type.
+         * All OSM tags that are used to determine the RadSim infrastructure type.
          *
-         * "cycleway" is the default key used by BRouter (probably, check again if unsure)
-         * "cycleway[:l/r/b]": used e.g. by the profile "fastbike-verylowtraffic"
+         * This list is used in our simplified back-mapping:
+         * - the mapping is hierarchical, so we need to ensure the mapping does not return early because of other tags
+         * - thus, the simplified back-mapping sets all interpreted tags to a null-like value (not interpreted)
+         * - and then only sets the relevant tag(s) to ensure the mapping returns at the new category
+         * - this way, after a user selects a new category, backward and forward mapping ends up there again
          *
-         * FIXME: See if we need this in BikeInfrastructure or DetailedBikeInfrastructure
-         * FIXME: Update list: Probably all tags, so we can use them also to set them to a null-value see above
+         * This list is also used by `backend.AreaRoadNetworkProcessingVerticle` to ensure these tags are processed.
          */
-        @Suppress("SpellCheckingInspection", "unused") // Part of the API
-        val specificOsmTags = listOf(
-            "highway",
-            "bicycle",
-            "cycleway",
-            "cycleway:both",
-            "cycleway:right",
-            "cycleway:left",
-        )
+        @Suppress("unused") // Part of the API
+        val specificOsmTags = OsmTag.entries.map { it.key }
+
+        /**
+         * All OSM tags that are used to determine the RadSim infrastructure type.
+         */
+        @Suppress("SpellCheckingInspection")
+        private enum class OsmTag(val key: String) {
+            ACCESS("access"),
+            BICYCLE("bicycle"),
+            BICYCLE_ROAD("bicycle_road"),
+            CYCLESTREET("cyclestreet"),
+            CYCLEWAY("cycleway"),
+            CYCLEWAY_BICYCLE("cycleway:bicycle"),
+            CYCLEWAY_BOTH("cycleway:both"),
+            CYCLEWAY_LEFT("cycleway:left"),
+            CYCLEWAY_LEFT_BICYCLE("cycleway:left:bicycle"),
+            CYCLEWAY_LEFT_LANE("cycleway:left:lane"),
+            CYCLEWAY_RIGHT("cycleway:right"),
+            CYCLEWAY_RIGHT_BICYCLE("cycleway:right:bicycle"),
+            CYCLEWAY_RIGHT_LANE("cycleway:right:lane"),
+            CYCLE_HIGHWAY("cycle_highway"),
+            FOOT("foot"),
+            HIGHWAY("highway"),
+            INDOOR("indoor"),
+            LEFT_BICYCLE("left:bicycle"),
+            LEFT_FOOT("left:foot"),
+            LEFT_LANE("left:lane"),
+            LEFT_TRAFFIC_SIGN("left:traffic_sign"),
+            MOTOR_VEHICLE("motor_vehicle"),
+            RIGHT_BICYCLE("right:bicycle"),
+            RIGHT_FOOT("right:foot"),
+            RIGHT_LANE("right:lane"),
+            RIGHT_TRAFFIC_SIGN("right:traffic_sign"),
+            SEGREGATED("segregated"),
+            SIDEWALK("sidewalk"),
+            SIDEWALK_BOTH("sidewalk:both"),
+            SIDEWALK_FOOT("sidewalk:foot"),
+            SIDEWALK_LEFT("sidewalk:left"),
+            SIDEWALK_LEFT_FOOT("sidewalk:left:foot"),
+            SIDEWALK_RIGHT("sidewalk:right"),
+            SIDEWALK_RIGHT_FOOT("sidewalk:right:foot"),
+            TRACK_TYPE("tracktype"),
+            TRAFFIC_SIGN("traffic_sign"),
+            TRAFFIC_SIGN_FORWARD("traffic_sign:forward"),
+            TRAM("tram"),
+            ;
+        }
 
         /**
          * Find the infrastructure type based on the provided OSM tags.
@@ -147,7 +198,7 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
         @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount")
         fun toRadSim(tags: Map<String, String>): DetailedBikeInfrastructure {
             // Map to complex categories, separating right and left as required for OSM to Radsim mapping
-            if (tags.containsValue("access") && isNotAccessible(tags) || tags["tram"] == "yes") {
+            if (tags.containsValue(OsmTag.ACCESS.key) && isNotAccessible(tags) || tags[OsmTag.TRAM.key] == "yes") {
                 return NO // unpacked from "service"
             }
 
@@ -250,17 +301,17 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
                 }
             }
 
-            if (isPedestrianRight(tags) && tags["indoor"] != "yes") {
-                return if (isPedestrianLeft(tags) && tags["indoor"] != "yes") {
-                    if (tags["access"] == "customers") NO
+            if (isPedestrianRight(tags) && tags[OsmTag.INDOOR.key] != "yes") {
+                return if (isPedestrianLeft(tags) && tags[OsmTag.INDOOR.key] != "yes") {
+                    if (tags[OsmTag.ACCESS.key] == "customers") NO
                     else PEDESTRIAN_BOTH
                 } else {
                     PEDESTRIAN_RIGHT_NO_LEFT
                 }
             }
 
-            if (isPedestrianLeft(tags) && tags["indoor"] != "yes") {
-                return if (tags["access"] == "customers") NO
+            if (isPedestrianLeft(tags) && tags[OsmTag.INDOOR.key] != "yes") {
+                return if (tags[OsmTag.ACCESS.key] == "customers") NO
                 else PEDESTRIAN_LEFT_NO_RIGHT
             }
 
@@ -316,8 +367,8 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
             ).any { it }
         }
 
-        // `mit_road` - cars are allowed, bikes also, but no dedicated infrastructure
-        // Unclear what "mit" stands for, MIV or German "with"? FIXME
+        // `mit_road` - both, cars and bikes are allowed, but no dedicated bike infrastructure
+        // MIT is used as an abbreviation for "motorized transport"
 
         fun mitRoadRight (tags: Map<String, String>) : Boolean {
             return listOf(
@@ -335,193 +386,186 @@ enum class DetailedBikeInfrastructure(val value: String, val backMappingType: Si
             ).any{ it }
         }
 
-        private val isSegregated: (Map<String, String>) -> Boolean = { x ->
-            x.any { (key, value) -> "segregated" in key && value == "yes" }
+        private val isSegregated: (Map<String, String>) -> Boolean = { tags ->
+            tags.any { (key, value) -> OsmTag.SEGREGATED.key in key && value == "yes" }
         }
 
-        private val isFootpath: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] in listOf("footway", "pedestrian")
+        private val isFootpath: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] in listOf("footway", "pedestrian")
         }
 
-        val isNotAccessible: (Map<String, String>) -> Boolean = { x ->
-            x["access"] == "no"
+        val isNotAccessible: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.ACCESS.key] == "no"
         }
 
-        private val useSidePath: (Map<String, String>) -> Boolean = { x ->
+        private val isIndoor: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.INDOOR.key] == "yes"
+        }
+
+        private val isPath: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] == "path"
+        }
+
+        private val isTrack: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] == "track"
+        }
+
+        private val canWalkRight: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.FOOT.key] in listOf("yes", "designated") ||
+                    tags.any { (key, value) -> OsmTag.RIGHT_FOOT.key in key && value in listOf("yes", "designated") } ||
+                    tags[OsmTag.SIDEWALK.key] in listOf("yes", "separated", "both", "right", "left") ||
+                    tags[OsmTag.SIDEWALK_RIGHT.key] in listOf("yes", "separated", "both", "right") ||
+                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf("yes", "separated", "both")
+        }
+
+        private val canWalkLeft: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.FOOT.key] in listOf("yes", "designated") ||
+                    tags.any { (key, value) -> OsmTag.LEFT_FOOT.key in key && value in listOf("yes", "designated") } ||
+                    tags[OsmTag.SIDEWALK.key] in listOf("yes", "separated", "both", "right", "left") ||
+                    tags[OsmTag.SIDEWALK_LEFT.key] in listOf("yes", "separated", "both", "left") ||
+                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf("yes", "separated", "both")
+        }
+
+        private val canBike: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.BICYCLE.key] in listOf("yes", "designated") &&
+                    tags[OsmTag.HIGHWAY.key] !in listOf("motorway", "motorway_link")
+        }
+
+        private val cannotBike: (Map<String, String>) -> Boolean = { tags ->
             @Suppress("SpellCheckingInspection")
-            x.any { (key, value) -> "bicycle" in key && value == "use_sidepath" }
+            tags[OsmTag.BICYCLE.key] in listOf("no", "dismount", "use_sidepath") ||
+                    tags[OsmTag.HIGHWAY.key] in listOf("corridor", "motorway", "motorway_link", "trunk", "trunk_link") ||
+                    tags[OsmTag.ACCESS.key] == "customers"
         }
 
-        private val isIndoor: (Map<String, String>) -> Boolean = { x ->
-            x["indoor"] == "yes"
+        private val isObligatedSegregated: (Map<String, String>) -> Boolean = { tags ->
+            (OsmTag.TRAFFIC_SIGN.key in tags.keys && "241" in tags[OsmTag.TRAFFIC_SIGN.key]!!) ||
+                    (OsmTag.TRAFFIC_SIGN_FORWARD.key in tags.keys && "241" in tags[OsmTag.TRAFFIC_SIGN_FORWARD.key]!!)
         }
 
-        private val isPath: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] == "path"
+        private val isDesignated: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.BICYCLE.key] == "designated"
         }
 
-        private val isTrack: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] == "track"
+        private val isBicycleDesignatedLeft: (Map<String, String>) -> Boolean = { tags ->
+            isDesignated(tags) || tags[OsmTag.CYCLEWAY_LEFT_BICYCLE.key] == "designated" || tags[OsmTag.CYCLEWAY_BICYCLE.key] == "designated"
         }
 
-        private val canWalkRight: (Map<String, String>) -> Boolean = { x ->
-            x["foot"] in listOf("yes", "designated") ||
-                    x.any { (key, value) -> "right:foot" in key && value in listOf("yes", "designated") } ||
-                    x["sidewalk"] in listOf("yes", "separated", "both", "right", "left") ||
-                    x["sidewalk:right"] in listOf("yes", "separated", "both", "right") ||
-                    x["sidewalk:both"] in listOf("yes", "separated", "both")
+        private val isBicycleDesignatedRight: (Map<String, String>) -> Boolean = { tags ->
+            isDesignated(tags) || tags[OsmTag.CYCLEWAY_RIGHT_BICYCLE.key] == "designated" || tags[OsmTag.CYCLEWAY_BICYCLE.key] == "designated"
         }
 
-        private val canWalkLeft: (Map<String, String>) -> Boolean = { x ->
-            x["foot"] in listOf("yes", "designated") ||
-                    x.any { (key, value) -> "left:foot" in key && value in listOf("yes", "designated") } ||
-                    x["sidewalk"] in listOf("yes", "separated", "both", "right", "left") ||
-                    x["sidewalk:left"] in listOf("yes", "separated", "both", "left") ||
-                    x["sidewalk:both"] in listOf("yes", "separated", "both")
+        private val isPedestrianDesignatedLeft: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.FOOT.key] == "designated" || tags[OsmTag.SIDEWALK_LEFT_FOOT.key] == "designated" || tags[OsmTag.SIDEWALK_FOOT.key] == "designated"
         }
 
-        private val canBike: (Map<String, String>) -> Boolean = { x ->
-            x["bicycle"] in listOf("yes", "designated") &&
-                    x["highway"] !in listOf("motorway", "motorway_link")
+        private val isPedestrianDesignatedRight: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.FOOT.key] == "designated" || tags[OsmTag.SIDEWALK_RIGHT_FOOT.key] == "designated" || tags[OsmTag.SIDEWALK_FOOT.key] == "designated"
         }
 
-        private val cannotBike: (Map<String, String>) -> Boolean = { x ->
-            @Suppress("SpellCheckingInspection")
-            x["bicycle"] in listOf("no", "dismount", "use_sidepath") ||
-                    x["highway"] in listOf("corridor", "motorway", "motorway_link", "trunk", "trunk_link") ||
-                    x["access"] == "customers"
+        private val isServiceTag: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] == "service"
         }
 
-        private val isObligatedSegregated: (Map<String, String>) -> Boolean = { x ->
-            ("traffic_sign" in x.keys && "241" in x["traffic_sign"]!!) ||
-                    ("traffic_sign:forward" in x.keys && "241" in x["traffic_sign:forward"]!!)
+        private val isAgricultural: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.MOTOR_VEHICLE.key] in listOf("agricultural", "forestry")
         }
 
-        private val isDesignated: (Map<String, String>) -> Boolean = { x ->
-            x["bicycle"] == "designated"
+        private val isAccessible: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.ACCESS.key].isNullOrEmpty() || !isNotAccessible(tags)
         }
 
-        private val isBicycleDesignatedLeft: (Map<String, String>) -> Boolean = { x ->
-            isDesignated(x) || x["cycleway:left:bicycle"] == "designated" || x["cycleway:bicycle"] == "designated"
+        private val isSmooth: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.TRACK_TYPE.key].isNullOrEmpty() || tags[OsmTag.TRACK_TYPE.key] in listOf("grade1", "grade2")
         }
 
-        private val isBicycleDesignatedRight: (Map<String, String>) -> Boolean = { x ->
-            isDesignated(x) || x["cycleway:right:bicycle"] == "designated" || x["cycleway:bicycle"] == "designated"
+        private val isVehicleAllowed: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.MOTOR_VEHICLE.key].isNullOrEmpty() || tags[OsmTag.MOTOR_VEHICLE.key] != "no"
         }
 
-        private val isPedestrianDesignatedLeft: (Map<String, String>) -> Boolean = { x ->
-            x["foot"] == "designated" || x["sidewalk:left:foot"] == "designated" || x["sidewalk:foot"] == "designated"
+        val isService: (Map<String, String>) -> Boolean = { tags ->
+            (isServiceTag(tags) ||
+                    (isAgricultural(tags) && isAccessible(tags)) ||
+                    (isPath(tags) && isAccessible(tags)) ||
+                    (isTrack(tags) && isAccessible(tags) && isSmooth(tags) && isVehicleAllowed(tags))) &&
+                    !isDesignated(tags)
         }
 
-        private val isPedestrianDesignatedRight: (Map<String, String>) -> Boolean = { x ->
-            x["foot"] == "designated" || x["sidewalk:right:foot"] == "designated" || x["sidewalk:foot"] == "designated"
-        }
-
-        private val isServiceTag: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] == "service"
-        }
-
-        private val isAgricultural: (Map<String, String>) -> Boolean = { x ->
-            x["motor_vehicle"] in listOf("agricultural", "forestry")
-        }
-
-        private val isAccessible: (Map<String, String>) -> Boolean = { x ->
-            x["access"].isNullOrEmpty() || !isNotAccessible(x)
-        }
-
-        private val isSmooth: (Map<String, String>) -> Boolean = { x ->
-            @Suppress("SpellCheckingInspection")
-            x["tracktype"].isNullOrEmpty() || x["tracktype"] in listOf("grade1", "grade2")
-        }
-
-        private val isVehicleAllowed: (Map<String, String>) -> Boolean = { x ->
-            x["motor_vehicle"].isNullOrEmpty() || x["motor_vehicle"] != "no"
-        }
-
-        val isService: (Map<String, String>) -> Boolean = { x ->
-            (isServiceTag(x) ||
-                    (isAgricultural(x) && isAccessible(x)) ||
-                    (isPath(x) && isAccessible(x)) ||
-                    (isTrack(x) && isAccessible(x) && isSmooth(x) && isVehicleAllowed(x))) &&
-                    !isDesignated(x)
-        }
-
-        private val canCarDrive: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] in listOf("motorway", "trunk", "primary", "secondary", "tertiary",
+        private val canCarDrive: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] in listOf("motorway", "trunk", "primary", "secondary", "tertiary",
                 "unclassified", "road", "residential", "living_street",
                 "primary_link", "secondary_link", "tertiary_link",
                 "motorway_link", "trunk_link")
         }
 
-        val isPathNotForbidden: (Map<String, String>) -> Boolean = { x ->
-            x["highway"] in listOf("cycleway", "track", "path") && !cannotBike(x)
+        val isPathNotForbidden: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.HIGHWAY.key] in listOf("cycleway", "track", "path") && !cannotBike(tags)
         }
 
-        private val isBikePathRight: (Map<String, String>) -> Boolean = { x ->
+        private val isBikePathRight: (Map<String, String>) -> Boolean = { tags ->
             @Suppress("SpellCheckingInspection")
-            x["highway"] == "cycleway" ||
-                    x.any { (key, value) -> "right:bicycle" in key && value == "designated" } &&
-                    x.none { (key, _) -> key == "cycleway:right:lane" } ||
-                    x["cycleway"] in listOf("track", "sidepath", "crossing") ||
-                    x["cycleway:right"] in listOf("track", "sidepath", "crossing") ||
-                    x["cycleway:both"] in listOf("track", "sidepath", "crossing") ||
-                    x.any { (key, value) -> "right:traffic_sign" in key && value == "237" }
+            tags[OsmTag.HIGHWAY.key] == "cycleway" ||
+                    tags.any { (key, value) -> OsmTag.RIGHT_BICYCLE.key in key && value == "designated" } &&
+                    tags.none { (key, _) -> key == OsmTag.CYCLEWAY_RIGHT_LANE.key } ||
+                    tags[OsmTag.CYCLEWAY.key] in listOf("track", "sidepath", "crossing") ||
+                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf("track", "sidepath", "crossing") ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf("track", "sidepath", "crossing") ||
+                    tags.any { (key, value) -> OsmTag.RIGHT_TRAFFIC_SIGN.key in key && value == "237" }
         }
 
-        private val isBikePathLeft: (Map<String, String>) -> Boolean = { x ->
+        private val isBikePathLeft: (Map<String, String>) -> Boolean = { tags ->
             @Suppress("SpellCheckingInspection")
-            x["highway"] == "cycleway" ||
-                    x.any { (key, value) -> "left:bicycle" in key && value == "designated" } &&
-                    x.none { (key, _) -> key == "cycleway:left:lane" } ||
-                    x["cycleway"] in listOf("track", "sidepath", "crossing") ||
-                    x["cycleway:left"] in listOf("track", "sidepath", "crossing") ||
-                    x["cycleway:both"] in listOf("track", "sidepath", "crossing") ||
-                    x.any { (key, value) -> "left:traffic_sign" in key && value == "237" }
+            tags[OsmTag.HIGHWAY.key] == "cycleway" ||
+                    tags.any { (key, value) -> OsmTag.LEFT_BICYCLE.key in key && value == "designated" } &&
+                    tags.none { (key, _) -> key == OsmTag.CYCLEWAY_LEFT_LANE.key } ||
+                    tags[OsmTag.CYCLEWAY.key] in listOf("track", "sidepath", "crossing") ||
+                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf("track", "sidepath", "crossing") ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf("track", "sidepath", "crossing") ||
+                    tags.any { (key, value) -> OsmTag.LEFT_TRAFFIC_SIGN.key in key && value == "237" }
         }
 
-        val isPedestrianRight: (Map<String, String>) -> Boolean = { x ->
-            (isFootpath(x) && !canBike(x) && !isIndoor(x)) ||
-                    (isPath(x) && canWalkRight(x) && !canBike(x) && !isIndoor(x))
+        val isPedestrianRight: (Map<String, String>) -> Boolean = { tags ->
+            (isFootpath(tags) && !canBike(tags) && !isIndoor(tags)) ||
+                    (isPath(tags) && canWalkRight(tags) && !canBike(tags) && !isIndoor(tags))
         }
 
-        val isPedestrianLeft: (Map<String, String>) -> Boolean = { x ->
-            (isFootpath(x) && !canBike(x) && !isIndoor(x)) ||
-                    (isPath(x) && canWalkLeft(x) && !canBike(x) && !isIndoor(x))
+        val isPedestrianLeft: (Map<String, String>) -> Boolean = { tags ->
+            (isFootpath(tags) && !canBike(tags) && !isIndoor(tags)) ||
+                    (isPath(tags) && canWalkLeft(tags) && !canBike(tags) && !isIndoor(tags))
         }
 
-        val isCycleHighway: (Map<String, String>) -> Boolean = { x ->
-            x["cycle_highway"] == "yes"
+        val isCycleHighway: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.CYCLE_HIGHWAY.key] == "yes"
         }
 
-        val isBikeRoad: (Map<String, String>) -> Boolean = { x ->
+        val isBikeRoad: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.BICYCLE_ROAD.key] == "yes" || tags[OsmTag.CYCLESTREET.key] == "yes"
+        }
+
+        val isBikeLaneRight: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.CYCLEWAY.key] in listOf("lane", "shared_lane") ||
+                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf("lane", "shared_lane") ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf("lane", "shared_lane") ||
+                    tags.any { (key, value) -> OsmTag.RIGHT_LANE.key in key && value == "exclusive" }
+        }
+
+        val isBikeLaneLeft: (Map<String, String>) -> Boolean = { tags ->
+            tags[OsmTag.CYCLEWAY.key] in listOf("lane", "shared_lane") ||
+                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf("lane", "shared_lane") ||
+                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf("lane", "shared_lane") ||
+                    tags.any { (key, value) -> OsmTag.LEFT_LANE.key in key && value == "exclusive" }
+        }
+
+        val isBusLaneRight: (Map<String, String>) -> Boolean = { tags ->
             @Suppress("SpellCheckingInspection")
-            x["bicycle_road"] == "yes" || x["cyclestreet"] == "yes"
+            tags[OsmTag.CYCLEWAY.key] == "share_busway" || tags[OsmTag.CYCLEWAY_RIGHT.key] == "share_busway"
+                    || tags[OsmTag.CYCLEWAY_BOTH.key] == "share_busway"
         }
 
-        val isBikeLaneRight: (Map<String, String>) -> Boolean = { x ->
-            x["cycleway"] in listOf("lane", "shared_lane") ||
-                    x["cycleway:right"] in listOf("lane", "shared_lane") ||
-                    x["cycleway:both"] in listOf("lane", "shared_lane") ||
-                    x.any { (key, value) -> "right:lane" in key && value == "exclusive" }
-        }
-
-        val isBikeLaneLeft: (Map<String, String>) -> Boolean = { x ->
-            x["cycleway"] in listOf("lane", "shared_lane") ||
-                    x["cycleway:left"] in listOf("lane", "shared_lane") ||
-                    x["cycleway:both"] in listOf("lane", "shared_lane") ||
-                    x.any { (key, value) -> "left:lane" in key && value == "exclusive" }
-        }
-
-        val isBusLaneRight: (Map<String, String>) -> Boolean = { x ->
+        val isBusLaneLeft: (Map<String, String>) -> Boolean = { tags ->
             @Suppress("SpellCheckingInspection")
-            x["cycleway"] == "share_busway" || x["cycleway:right"] == "share_busway"
-                    || x["cycleway:both"] == "share_busway"
-        }
-
-        val isBusLaneLeft: (Map<String, String>) -> Boolean = { x ->
-            @Suppress("SpellCheckingInspection")
-            x["cycleway"] == "share_busway" || x["cycleway:left"] == "share_busway"
-                    || x["cycleway:both"] == "share_busway"
+            tags[OsmTag.CYCLEWAY.key] == "share_busway" || tags[OsmTag.CYCLEWAY_LEFT.key] == "share_busway"
+                    || tags[OsmTag.CYCLEWAY_BOTH.key] == "share_busway"
         }
     }
 }

@@ -44,7 +44,17 @@ import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mixedWay
  * "Simplified" means that we treat all OSM ways as bicycle infrastructure and annotate other vehicle usage.
  * This is not how OSM actually works, see [DetailedBikeInfrastructure] for the correct representation.
  *
- * The simplified format is used for simple back-mapping (Radsim to OSM).
+ * The simplified format is used for back-mapping (Radsim to OSM) until we generate new RouteAlternatives.
+ * - The simplified version sets all OSM tags interpreted by the [DetailedBikeInfrastructure] to a value
+ *   which does not interact with the mapping code. We then only set the OSM tags relevant for the
+ *   [SimplifiedBikeInfrastructure] to a value which results into the newly selected category.
+ * - We'll then switch to a Matrix-lookup "what OSM tags are needed to switch from category 4 to 6".
+ * - We might then handle left/right separately (in OSM and UI) but need to consider for-/backward and the direction
+ *   in which the geometry is defined. "Right" can mean "forward" if defined in the opposite direction.
+ *   Please check out: https://wiki.openstreetmap.org/wiki/Forward_%26_backward,_left_%26_right
+ *
+ * The back-mapping will also be relevant for the feature where the user can update the road network state.
+ *
  * For mapping from OSM to Radsim, use [DetailedBikeInfrastructure].
  *
  * @property value The value for the RadSim infrastructure type tag.
@@ -91,40 +101,17 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
      */
     NO("No", setOf(OsmTag("highway", "service"))),
 
-    // FIXME See if these "no" can be in here
+    // These 4 categories are sub-categories of [NO], maybe including [NO] itself.
+    // They only exist for mapping but are aggregated as [NO] in the client and only [NO] can be selected in the client.
+    // FIXME See if these "no" can be in here - or remove if we remove DetailedBI.backMappingType
     SERVICE_MISC("ServiceMisc", NO.backMappingTag),
     MIT_ROAD("MitRoad", NO.backMappingTag),
     PEDESTRIAN("Pedestrian", NO.backMappingTag),
     PATH_NOT_FORBIDDEN("PathNotForbidden", NO.backMappingTag),
     ;
 
+    /*
     companion object {
-        /**
-         * The RadSim tag used to store the infrastructure type.
-         *
-         * FIXME: See if we need this in SimplifiedBikeInfrastructure or DetailedBikeInfrastructure
-         */
-        const val RADSIM_TAG = "roadStyle"
-
-        /**
-         * The specific OSM tags that are used to determine the RadSim infrastructure type.
-         *
-         * "cycleway" is the default key used by BRouter (probably, check again if unsure)
-         * "cycleway[:l/r/b]": used e.g. by the profile "fastbike-verylowtraffic"
-         *
-         * FIXME: See if we need this in SimplifiedBikeInfrastructure or DetailedBikeInfrastructure
-         * FIXME: Update list: Probably all tags, so we can use them also to set them to a null-value see above
-         */
-        @Suppress("SpellCheckingInspection", "unused") // Part of the API
-        val specificOsmTags = listOf(
-            "highway",
-            "bicycle",
-            "cycleway",
-            "cycleway:both",
-            "cycleway:right",
-            "cycleway:left",
-        )
-
         /**
          * Find the infrastructure type based on the provided OSM tags.
          *
@@ -177,7 +164,7 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
                 return MIXED_WAY
             }
 
-            // Check for mit road (left or right)
+            // Check for motorized transport (MIT) road (left or right)
             if (mitRoadLeft(tags) || mitRoadRight(tags)) {
                 return MIT_ROAD
             }
@@ -199,5 +186,5 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
             // Fallback to "no"
             return NO
         }
-    }
+    }*/
 }
