@@ -20,34 +20,18 @@
 package de.radsim.translation.model
 
 import de.cyface.model.osm.OsmTag
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.bicycleWayLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.bicycleWayRight
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isBikeLaneLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isBikeLaneRight
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isBikeRoad
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isBusLaneLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isBusLaneRight
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isCycleHighway
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isNotAccessible
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isPathNotForbidden
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isPedestrianLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isPedestrianRight
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.isService
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mitRoadLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mitRoadRight
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mixedWayLeft
-import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mixedWayRight
 
 /**
  * An enum with the infrastructure types in the "simplified" format.
  *
  * "Simplified" means that we treat all OSM ways as bicycle infrastructure and annotate other vehicle usage.
- * This is not how OSM actually works, see [DetailedBikeInfrastructure] for the correct representation.
+ * This is not how OSM actually works, see [BikeInfrastructure] for the correct representation.
  *
  * The simplified format is used for back-mapping (Radsim to OSM) until we generate new RouteAlternatives.
- * - The simplified version sets all OSM tags interpreted by the [DetailedBikeInfrastructure] to a value
- *   which does not interact with the mapping code. We then only set the OSM tags relevant for the
- *   [SimplifiedBikeInfrastructure] to a value which results into the newly selected category.
+ * - The simplified version sets all OSM tags interpreted by the [BikeInfrastructure] to a value
+ *   which does not interact with the mapping code (see `backend.RadSimTagMerger.merge`). We then only set the OSM tags
+ *   relevant for the [SimplifiedBikeInfrastructure] to a value which results into the newly selected category.
+ *   This ensures our hierarchical mapping does not return early with another category.
  * - We'll then switch to a Matrix-lookup "what OSM tags are needed to switch from category 4 to 6".
  * - We might then handle left/right separately (in OSM and UI) but need to consider for-/backward and the direction
  *   in which the geometry is defined. "Right" can mean "forward" if defined in the opposite direction.
@@ -55,23 +39,20 @@ import de.radsim.translation.model.DetailedBikeInfrastructure.Companion.mixedWay
  *
  * The back-mapping will also be relevant for the feature where the user can update the road network state.
  *
- * For mapping from OSM to Radsim, use [DetailedBikeInfrastructure].
+ * For mapping from OSM to Radsim, use [BikeInfrastructure].
  *
  * @property value The value for the RadSim infrastructure type tag.
  * @property backMappingTag The OSM tag used to back-map the RadSim infrastructure type to OSM.
  */
 enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: Set<OsmTag>) {
 
-    // FIXME: Also set all OSM tags interpreted by the mapping to a value which does not
-    // lead to an early "out" in the hierarchical mapping function
-
     /**
-     * FIXME
+     * Infrastructure type where bikes have their own "highway".
      */
     CYCLE_HIGHWAY("CycleHighway", setOf(OsmTag("cycle_highway", "yes"))),
 
     /**
-     * FIXME
+     * Infrastructure where bikes have a road which is specifically designated for bicycles.
      */
     BICYCLE_ROAD("BicycleRoad", setOf(OsmTag("bicycle_road", "yes"))),
 
@@ -110,8 +91,12 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
     PATH_NOT_FORBIDDEN("PathNotForbidden", NO.backMappingTag),
     ;
 
-    /*
     companion object {
+        /**
+         * The RadSim tag used to store the simplified infrastructure type (6 categories + "no").
+         */
+        const val RADSIM_TAG = "roadStyleSimplified"
+
         /**
          * Find the infrastructure type based on the provided OSM tags.
          *
@@ -119,7 +104,7 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
          *
          * @param tags The tags to search for the infrastructure type.
          * @return The infrastructure type based on the provided tags.
-         */
+         * /
         // We keep the method structure to be easier comparable with the mapping from TUD:
         // https://github.com/1prk/osm_categorizer/blob/radsim/netapy/assessor_free.py
         @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount")
@@ -185,6 +170,6 @@ enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: S
 
             // Fallback to "no"
             return NO
-        }
-    }*/
+        }*/
+    }
 }

@@ -19,9 +19,6 @@
 package de.radsim.translation.model
 
 import de.cyface.model.osm.OsmTag
-import de.radsim.translation.model.BikeInfrastructure.LANE
-import de.radsim.translation.model.BikeInfrastructure.MIXED
-import de.radsim.translation.model.BikeInfrastructure.TRACK
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
