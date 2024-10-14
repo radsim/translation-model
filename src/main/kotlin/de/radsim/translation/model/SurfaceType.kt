@@ -27,7 +27,8 @@ import de.cyface.model.osm.OsmTag
  *
  * @property value The value for the RadSim surface type tag.
  * @property backMappingTag The OSM tag used to back-map the RadSim surface type to OSM. To determine good back-mapping
- * candidates TUD checked the penalties in the BRouter profiles, which depend heavily on the profile type.
+ * candidates our project partner checked the penalties in the BRouter profiles, which depend heavily on the profile
+ * type.
  */
 enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
     /**
@@ -77,7 +78,7 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
          * (documentation https://taginfo.openstreetmap.org/taginfo/apidoc#api_4_key_combinations)
          * and https://taginfo.openstreetmap.org/api/4/key/similar?key=cycleway
          *
-         * We don't check "sidewalk" and "footway" surfaces on purpose (TUD).
+         * We don't check "sidewalk" and "footway" surfaces on purpose (source: project partner).
          */
         @Suppress("MemberVisibilityCanBePrivate") // Part of the API
         val specificOsmTags = listOf(
@@ -104,9 +105,9 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
             /**
              * The mapping of OSM tags to RadSim surface types.
              *
-             * In the dataset of the pilot municipalities (2024) the TUD found that in tag values some contributors
-             * use other characters like `;`, `/`, `_`, etc. instead of `:`, (e.g. `cobblestone;flattened`).
-             * This is why we use `.` in the regex expressions.
+             * In the dataset of the pilot municipalities (2024) our project partner found that in tag values some
+             * contributors use other characters like `;`, `/`, `_`, etc. instead of `:`,
+             * (e.g. `cobblestone;flattened`). This is why we use `.` in the regex expressions.
              */
             @Suppress("RedundantSuppression") // IDE bug: marks SpellCheckingInspection as redundant sometimes
             val categoryValueMap = mapOf(
