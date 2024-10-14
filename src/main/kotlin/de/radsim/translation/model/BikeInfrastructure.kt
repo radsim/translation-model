@@ -114,6 +114,17 @@ enum class BikeInfrastructure(
         const val RADSIM_TAG = "roadStyle"
 
         /**
+         * Tries to parse a [BikeInfrastructure] from the provided value.
+         *
+         * @param value The value to parse
+         * @return The [BikeInfrastructure] matching the provided value
+         * @throws NoSuchElementException if no matching value was found
+         */
+        fun fromValue(value: String): BikeInfrastructure {
+            return entries.first { it.value == value }
+        }
+
+        /**
          * All OSM tags that are used to determine the RadSim infrastructure type.
          *
          * This list is used by `backend.RadSimTagMerger.merge` which already implements the first step of the
