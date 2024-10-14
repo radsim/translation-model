@@ -18,71 +18,391 @@
  */
 package de.radsim.translation.model
 
-import de.cyface.model.osm.OsmTag
-import de.radsim.translation.model.BikeInfrastructure.LANE
-import de.radsim.translation.model.BikeInfrastructure.MIXED
-import de.radsim.translation.model.BikeInfrastructure.TRACK
+import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
+/**
+ * Tests the internal functionality of [BikeInfrastructure].
+ */
 class BikeInfrastructureTest {
+
     @ParameterizedTest
     @MethodSource("testParameters")
     fun testToRadSim(parameter: BikeInfrastructureParameters) {
         // Arrange
-        val result = BikeInfrastructure.toRadSim(parameter.osmTags, MIXED)
+        val result = BikeInfrastructure.toRadSim(parameter.osmTags)
 
         // Assert
-        assert(result == parameter.expectedRadSimTag)
+        assertThat(
+            "Expected OSM tags ${parameter.osmTags} to map to ${parameter.expectedRadSimTag} but was $result",
+            result,
+            equalTo(parameter.expectedRadSimTag)
+        )
     }
 
     @ParameterizedTest
-    @MethodSource("backMappingParameters")
-    fun testBackMapping(parameter: BackMappingInfrastructureParameters) {
-        // Arrange
+    @MethodSource("simplificationMappingParameters")
+    fun testSimplificationMapping(parameter: SimplifiedInfrastructureParameters) {
         // Act
-        val result = parameter.radSimTag.backMappingTag
+        val result = parameter.bikeInfrastructure.simplified
 
         // Assert
-        assert(result == parameter.osmTag)
+        assertThat(
+            "Expected ${parameter.bikeInfrastructure} to map to ${parameter.expectedSimplified} but was $result",
+            result,
+            equalTo(parameter.expectedSimplified)
+        )
     }
 
     companion object {
         /**
+         * Attention:
+         * - The test cases in here have been generated, they can safely be removed or replaced.
+         * - If you add test cases which reproduce a bug, please specifically mark them as such, linking the Bug id.
+         *
          * @return All test setup to run
          */
+        @Suppress("SpellCheckingInspection")
         @JvmStatic
+        @SuppressWarnings("LongMethod")
         fun testParameters(): Stream<BikeInfrastructureParameters> {
             return Stream.of(
-                BikeInfrastructureParameters(mapOf("highway" to "cycleway"), TRACK),
-                BikeInfrastructureParameters(mapOf("cycleway" to "track"), TRACK),
-                BikeInfrastructureParameters(mapOf("cycleway:right" to "track"), TRACK),
-                BikeInfrastructureParameters(mapOf("cycleway:left" to "track"), TRACK),
-                BikeInfrastructureParameters(mapOf("cycleway" to "opposite_track"), TRACK),
-                BikeInfrastructureParameters(mapOf("bicycle" to "path"), TRACK),
-                BikeInfrastructureParameters(mapOf("bicycle" to "track"), TRACK),
+                // Tests written for mapping as defined in `set_value() => if sides == "double"`
+                // https://github.com/1prk/osm_categorizer/blob/radsim/netapy/assessor_free.py
+                // OSM tags that should map to 'no'
+                BikeInfrastructureParameters(mapOf("access" to "no"), BikeInfrastructure.NO),
+                BikeInfrastructureParameters(mapOf("tram" to "yes"), BikeInfrastructure.NO),
 
-                BikeInfrastructureParameters(mapOf("cycleway" to "lane"), LANE),
-                BikeInfrastructureParameters(mapOf("bicycle" to "lane"), LANE),
-                BikeInfrastructureParameters(mapOf("cycleway:right" to "lane"), LANE),
-                BikeInfrastructureParameters(mapOf("cycleway:left" to "lane"), LANE),
-                BikeInfrastructureParameters(mapOf("cycleway:both" to "lane"), LANE),
-                BikeInfrastructureParameters(mapOf("cycleway" to "opposite_lane"), LANE),
+                // OSM tags that should map to bicycle ways
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:right" to "track"),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:left" to "track"),
+                    BikeInfrastructure.BICYCLE_WAY_LEFT_NO_RIGHT
+                ),
+                BikeInfrastructureParameters(mapOf("cycleway" to "track"), BikeInfrastructure.BICYCLE_WAY_BOTH),
 
-                // Other or no information
-                BikeInfrastructureParameters(mapOf("highway" to "somethingElse"), MIXED),
-                BikeInfrastructureParameters(mapOf(), MIXED),
+                // OSM tags that should map to bicycle lanes
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:right" to "lane"),
+                    BikeInfrastructure.BICYCLE_LANE_RIGHT_NO_LEFT
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:left" to "lane"),
+                    BikeInfrastructure.BICYCLE_LANE_LEFT_NO_RIGHT
+                ),
+
+                // OSM tags that should map to mixed ways
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "designated",
+                        "segregated" to "no"
+                    ),
+                    BikeInfrastructure.MIXED_WAY_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "designated",
+                        "segregated" to "no",
+                        "cycleway:right" to "track"
+                    ),
+                    BikeInfrastructure.MIXED_WAY_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "yes",
+                        "segregated" to "no"
+                    ),
+                    BikeInfrastructure.MIXED_WAY_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "yes",
+                        "segregated" to "yes"
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_BOTH // Because segregated=yes
+                ),
+
+                // OSM tags that should map to bus lanes
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:right" to "share_busway"),
+                    BikeInfrastructure.BUS_LANE_RIGHT_NO_LEFT
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("cycleway:left" to "share_busway"),
+                    BikeInfrastructure.BUS_LANE_LEFT_NO_RIGHT
+                ),
+
+                // OSM tags that should map to pedestrian paths
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "footway"),
+                    BikeInfrastructure.PEDESTRIAN_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "footway", "bicycle" to "no"),
+                    BikeInfrastructure.PEDESTRIAN_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "footway", "bicycle" to "yes"),
+                    BikeInfrastructure.MIXED_WAY_BOTH // Because bicycles are allowed
+                ),
+
+                // OSM tags that should map to mit roads
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "tertiary"),
+                    BikeInfrastructure.MIT_ROAD_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "primary"),
+                    BikeInfrastructure.MIT_ROAD_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "residential"),
+                    BikeInfrastructure.MIT_ROAD_BOTH
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "residential",
+                        "sidewalk:right" to "yes"
+                    ),
+                    BikeInfrastructure.MIT_ROAD_BOTH
+                ),
+
+                // OSM tags that should map to cycle highway
+                BikeInfrastructureParameters(
+                    mapOf("cycle_highway" to "yes"),
+                    BikeInfrastructure.CYCLE_HIGHWAY
+                ),
+
+                // OSM tags that should map to bicycle road
+                BikeInfrastructureParameters(
+                    mapOf("bicycle_road" to "yes"),
+                    BikeInfrastructure.BICYCLE_ROAD
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("cyclestreet" to "yes"),
+                    BikeInfrastructure.BICYCLE_ROAD
+                ),
+
+                // OSM tags that should map to path not forbidden
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "path"),
+                    BikeInfrastructure.SERVICE_MISC // Since it's considered service unless designated
+                ),
+
+                // OSM tags that should map to service_misc
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "service"),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "track"),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "track", "bicycle" to "designated"),
+                    BikeInfrastructure.BICYCLE_WAY_BOTH // Because bicycle=designated
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "path", "bicycle" to "yes"),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "cycleway:right" to "track",
+                        "sidewalk:right" to "yes"
+                    ),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "path",
+                        "bicycle" to "yes",
+                        "foot" to "yes",
+                        "segregated" to "no",
+                        "sidewalk:right" to "yes"
+                    ),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:right" to "share_busway",
+                        "highway" to "path",
+                        "bicycle" to "yes",
+                        "foot" to "yes",
+                        "segregated" to "no"
+                    ),
+                    BikeInfrastructure.SERVICE_MISC
+                ),
+
+                // OSM tags that should map to 'no' due to not accessible
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "residential", "access" to "no"),
+                    BikeInfrastructure.NO
+                ),
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "path", "access" to "no"),
+                    BikeInfrastructure.NO
+                ),
+
+                // OSM tags that should map to 'no' due to tram=yes
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "primary", "tram" to "yes"),
+                    BikeInfrastructure.NO
+                ),
+
+                // OSM tags with indoor=yes should not be considered pedestrian
+                BikeInfrastructureParameters(
+                    mapOf("highway" to "footway", "indoor" to "yes"),
+                    BikeInfrastructure.NO
+                ),
+
+                // Testing with cycleway=lane and sidewalks
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "residential",
+                        "cycleway" to "lane",
+                        "sidewalk" to "both"
+                    ),
+                    BikeInfrastructure.BICYCLE_LANE_BOTH
+                ),
+
+                // Testing bus lanes with mixed ways
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:right" to "share_busway",
+                        "cycleway:left" to "track"
+                    ),
+                    // Since left is track, we need to see if mapping adjusts
+                    BikeInfrastructure.BICYCLE_WAY_LEFT_BUS_RIGHT
+                ),
+
+                // Testing bicycle lanes on both sides
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway" to "lane",
+                        "cycleway:both" to "lane"
+                    ),
+                    BikeInfrastructure.BICYCLE_LANE_BOTH
+                ),
+
+                // Testing bicycle ways on both sides with segregated
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "highway" to "cycleway",
+                        "segregated" to "yes"
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_BOTH
+                ),
+
+                // Testing bicycle way on one side and bicycle lane on the other
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:right" to "track",
+                        "cycleway:left" to "lane"
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_LANE_LEFT
+                ),
+
+                // Testing bicycle way right and pedestrian left
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:right" to "track",
+                        "highway" to "footway",
+                        "bicycle" to "no"
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_PEDESTRIAN_LEFT
+                )
             )
         }
 
+        /**
+         * Attention:
+         * - The test cases in here have been generated, they can safely be removed or replaced.
+         * - If you add test cases which reproduce a bug, please specifically mark them as such, linking the Bug id.
+         */
         @JvmStatic
-        fun backMappingParameters(): Stream<BackMappingInfrastructureParameters> {
+        fun simplificationMappingParameters(): Stream<SimplifiedInfrastructureParameters> {
             return Stream.of(
-                BackMappingInfrastructureParameters(TRACK, OsmTag("cycleway", "track")),
-                BackMappingInfrastructureParameters(LANE, OsmTag("cycleway", "lane")),
-                BackMappingInfrastructureParameters(MIXED, OsmTag("bicycle", "yes")),
-                BackMappingInfrastructureParameters(BikeInfrastructure.NO_INFORMATION, null),
+                // Cycle highway simplified to CYCLE_HIGHWAY
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.CYCLE_HIGHWAY,
+                    SimplifiedBikeInfrastructure.CYCLE_HIGHWAY
+                ),
+
+                // Bicycle road simplified to BICYCLE_ROAD
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_ROAD,
+                    SimplifiedBikeInfrastructure.BICYCLE_ROAD
+                ),
+
+                // Various bicycle ways simplified to BICYCLE_WAY
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_WAY_BOTH,
+                    SimplifiedBikeInfrastructure.BICYCLE_WAY
+                ),
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_LANE_LEFT,
+                    SimplifiedBikeInfrastructure.BICYCLE_WAY
+                ),
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT,
+                    SimplifiedBikeInfrastructure.BICYCLE_WAY
+                ),
+
+                // Various bicycle lanes simplified to BICYCLE_LANE
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_LANE_BOTH,
+                    SimplifiedBikeInfrastructure.BICYCLE_LANE
+                ),
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BICYCLE_LANE_RIGHT_MIT_LEFT,
+                    SimplifiedBikeInfrastructure.BICYCLE_LANE
+                ),
+
+                // Bus lanes simplified to BUS_LANE
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BUS_LANE_BOTH,
+                    SimplifiedBikeInfrastructure.BUS_LANE
+                ),
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.BUS_LANE_RIGHT_NO_LEFT,
+                    SimplifiedBikeInfrastructure.BUS_LANE
+                ),
+
+                // Mixed ways simplified to MIXED_WAY
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.MIXED_WAY_BOTH,
+                    SimplifiedBikeInfrastructure.MIXED_WAY
+                ),
+                SimplifiedInfrastructureParameters(
+                    BikeInfrastructure.MIXED_WAY_RIGHT_NO_LEFT,
+                    SimplifiedBikeInfrastructure.MIXED_WAY
+                ),
+
+                // Default case simplified to NO
+                SimplifiedInfrastructureParameters(BikeInfrastructure.NO, SimplifiedBikeInfrastructure.NO)
             )
         }
     }
@@ -93,7 +413,7 @@ class BikeInfrastructureParameters(
     val expectedRadSimTag: BikeInfrastructure,
 )
 
-class BackMappingInfrastructureParameters(
-    val radSimTag: BikeInfrastructure,
-    val osmTag: OsmTag?,
+class SimplifiedInfrastructureParameters(
+    val bikeInfrastructure: BikeInfrastructure,
+    val expectedSimplified: SimplifiedBikeInfrastructure,
 )

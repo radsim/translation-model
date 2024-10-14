@@ -52,29 +52,49 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                     val value = radsSimTag.value
                     when (key) {
                         // For an overview see https://wiki.openstreetmap.org/wiki/Bicycle
-                        BikeInfrastructure.RADSIM_TAG ->
+                        SimplifiedBikeInfrastructure.RADSIM_TAG -> {
+                            // Attention:
+                            // [backend.RadSimTagMerger.merge] already implements the first step of the simplified
+                            // back-mapping: all tags which interfere with the [BikeInfrastructure] mapping are removed
+                            // For more details about the back-mapping see [SimplifiedBikeInfrastructure].
+
+                            // Then write the relevant OSM tags to ensure the new category is returned during mapping.
                             when (value) {
-                                BikeInfrastructure.TRACK.value -> {
-                                    // See https://wiki.openstreetmap.org/wiki/DE:Tag:cycleway%3Dtrack
-                                    osmTags.add(BikeInfrastructure.TRACK.backMappingTag!!)
+                                SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.backMappingTag)
                                 }
 
-                                BikeInfrastructure.LANE.value -> {
-                                    // See https://wiki.openstreetmap.org/wiki/DE:Tag:cycleway%3Dlane
-                                    osmTags.add(BikeInfrastructure.LANE.backMappingTag!!)
+                                SimplifiedBikeInfrastructure.BICYCLE_ROAD.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_ROAD.backMappingTag)
                                 }
 
-                                BikeInfrastructure.MIXED.value -> {
-                                    // explicitly overwrite bicycle permission, often implicated by highway-type
-                                    osmTags.add(BikeInfrastructure.MIXED.backMappingTag!!)
+                                SimplifiedBikeInfrastructure.BICYCLE_WAY.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_WAY.backMappingTag)
+                                }
+
+                                SimplifiedBikeInfrastructure.BICYCLE_LANE.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_LANE.backMappingTag)
+                                }
+
+                                SimplifiedBikeInfrastructure.BUS_LANE.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.BUS_LANE.backMappingTag)
+                                }
+
+                                SimplifiedBikeInfrastructure.MIXED_WAY.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.MIXED_WAY.backMappingTag)
+                                }
+
+                                SimplifiedBikeInfrastructure.NO.value -> {
+                                    osmTags.addAll(SimplifiedBikeInfrastructure.NO.backMappingTag)
                                 }
 
                                 else -> {
-                                    require(value == BikeInfrastructure.NO_INFORMATION.value) {
-                                        "Unknown RadSim tag: $radsSimTag"
+                                    error {
+                                        "Unexpected RadSim tag: $radsSimTag"
                                     }
                                 }
                             }
+                        }
 
                         // To check the penalty during routing, see:
                         // https://github.com/abrensch/brouter/blob/372a04a6cf4608cf14bc7045aed9499012a23f52/misc/profiles2/fastbike-verylowtraffic.brf#L136
@@ -168,13 +188,10 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
     /**
      * Maps the `OsmTag`s to `RadSimTag`s.
      *
-     * @param defaultInfrastructure If `true` the default `BikeInfrastructure.MIXED` tags is used when the original tags
-     * contain no information about the infrastructure as expected by the (deprecated) `Application` `translation` mode.
-     * If `false` the `BikeInfrastructure.NO_INFORMATION` is used instead as expected by the `RadSimTagMerger`.
      * @return the `RadSimTag`s
      */
     @SuppressWarnings("CyclomaticComplexMethod") // TODO
-    fun toRadSim(defaultInfrastructure: Boolean): HashMap<String, String> {
+    fun toRadSim(): HashMap<String, String> {
         val original = HashMap<String, Any>()
         tags.forEach(Consumer { osmTag: OsmTag -> original[osmTag.key] = osmTag.value })
         val originalTags = HashMap<String, String>()
@@ -202,18 +219,10 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                 originalTags[SurfaceType.RADSIM_TAG] = SurfaceType.COMFORT_4_GRAVEL.value
         }
 
-        // Cannot add another BikeInfrastructure type as this would affect the Mapper.map() functionality
-        val default = if (defaultInfrastructure) { BikeInfrastructure.MIXED } else { BikeInfrastructure.NO_INFORMATION }
-        when (BikeInfrastructure.toRadSim(original, default)) {
-            BikeInfrastructure.LANE ->
-                originalTags[BikeInfrastructure.RADSIM_TAG] = BikeInfrastructure.LANE.value
-            BikeInfrastructure.TRACK ->
-                originalTags[BikeInfrastructure.RADSIM_TAG] = BikeInfrastructure.TRACK.value
-            BikeInfrastructure.MIXED ->
-                originalTags[BikeInfrastructure.RADSIM_TAG] = BikeInfrastructure.MIXED.value
-            else ->
-                originalTags[BikeInfrastructure.RADSIM_TAG] = BikeInfrastructure.NO_INFORMATION.value
-        }
+        val bikeInfrastructureMap = BikeInfrastructure.entries.associateWith { it.value }
+        val bikeInfrastructure = BikeInfrastructure.toRadSim(original)
+        val radSimTagValue = bikeInfrastructureMap[bikeInfrastructure] ?: error("Invalid value: $bikeInfrastructure")
+        originalTags[BikeInfrastructure.RADSIM_TAG] = radSimTagValue
 
         when (Speed.toRadSim(original)) {
             Speed.MAX_SPEED_MIV_LTE_30 ->
