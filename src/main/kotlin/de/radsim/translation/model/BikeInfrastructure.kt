@@ -120,6 +120,7 @@ enum class BikeInfrastructure(
          * @return The [BikeInfrastructure] matching the provided value
          * @throws NoSuchElementException if no matching value was found
          */
+        @Suppress("unused") // Part of the API, used by `backend.Way.Properties`
         fun fromValue(value: String): BikeInfrastructure {
             return entries.first { it.value == value }
         }
@@ -178,7 +179,6 @@ enum class BikeInfrastructure(
             TRAFFIC_SIGN("traffic_sign"),
             TRAFFIC_SIGN_FORWARD("traffic_sign:forward"),
             TRAM("tram"),
-            ;
         }
 
         /**
@@ -229,7 +229,6 @@ enum class BikeInfrastructure(
             UNCLASSIFIED("unclassified"),
             USE_SIDE_PATH("use_sidepath"),
             YES("yes"),
-            ;
         }
 
         /**
@@ -237,16 +236,17 @@ enum class BikeInfrastructure(
          *
          * This method checks specific OSM tags hierarchically and returns the first match.
          *
+         * It maps to the [BikeInfrastructure] which checks left and right side separately.
+         *
          * @param tags The tags to search for the infrastructure type.
          * @return The infrastructure type based on the provided tags.
          */
         // We keep the method structure to be easier comparable with the mapping from TUD:
         // https://github.com/1prk/osm_categorizer/blob/radsim/netapy/assessor_free.py
-        @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount")
+        @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount", "ComplexCondition")
         fun toRadSim(tags: Map<String, Any>): BikeInfrastructure {
-            // Map to complex categories, separating right and left as required for OSM to Radsim mapping
-            if (tags.containsValue(OsmTag.ACCESS.key) && isNotAccessible(tags)
-                || tags[OsmTag.TRAM.key] == OsmValue.YES.value
+            if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
+                (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
             ) {
                 return NO // unpacked from `service`
             }
@@ -352,16 +352,22 @@ enum class BikeInfrastructure(
 
             if (isPedestrianRight(tags) && tags[OsmTag.INDOOR.key] != OsmValue.YES.value) {
                 return if (isPedestrianLeft(tags) && tags[OsmTag.INDOOR.key] != OsmValue.YES.value) {
-                    if (tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value) NO
-                    else PEDESTRIAN_BOTH
+                    if (tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value) {
+                        NO
+                    } else {
+                        PEDESTRIAN_BOTH
+                    }
                 } else {
                     PEDESTRIAN_RIGHT_NO_LEFT
                 }
             }
 
             if (isPedestrianLeft(tags) && tags[OsmTag.INDOOR.key] != OsmValue.YES.value) {
-                return if (tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value) NO
-                else PEDESTRIAN_LEFT_NO_RIGHT
+                return if (tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value) {
+                    NO
+                } else {
+                    PEDESTRIAN_LEFT_NO_RIGHT
+                }
             }
 
             if (isPathNotForbidden(tags)) return PATH_NOT_FORBIDDEN
@@ -421,188 +427,239 @@ enum class BikeInfrastructure(
 
         private fun mitRoadRight(tags: Map<String, Any>): Boolean {
             return listOf(
-                canCarDrive(tags) && !isBikePathRight(tags) && !isBikeRoad(tags) && !isFootpath(tags)
-                        && !isBikeLaneRight(tags) && !isBusLaneRight(tags) && !isPath(tags) && !isTrack(tags)
-                        && !cannotBike(tags)
+                canCarDrive(tags) && !isBikePathRight(tags) && !isBikeRoad(tags) && !isFootpath(tags) &&
+                    !isBikeLaneRight(tags) && !isBusLaneRight(tags) && !isPath(tags) && !isTrack(tags) &&
+                    !cannotBike(tags)
             ).any { it }
         }
 
         private fun mitRoadLeft(tags: Map<String, Any>): Boolean {
             return listOf(
-                canCarDrive(tags) && !isBikePathLeft(tags) && !isBikeRoad(tags) && !isFootpath(tags)
-                        && !isBikeLaneLeft(tags) && !isBusLaneLeft(tags) && !isPath(tags) && !isTrack(tags)
-                        && !cannotBike(tags)
+                canCarDrive(tags) && !isBikePathLeft(tags) && !isBikeRoad(tags) && !isFootpath(tags) &&
+                    !isBikeLaneLeft(tags) && !isBusLaneLeft(tags) && !isPath(tags) && !isTrack(tags) &&
+                    !cannotBike(tags)
             ).any { it }
         }
 
         private val isSegregated: (Map<String, Any>) -> Boolean = { tags ->
-            tags.any { (key, value) -> OsmTag.SEGREGATED.key in key && value == OsmValue.YES.value }
+            tags.any { (key, value) ->
+                OsmTag.SEGREGATED.key in key && value == OsmValue.YES.value
+            }
         }
 
         private val isFootpath: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] in listOf(OsmValue.FOOTWAY.value, OsmValue.PEDESTRIAN.value)
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            highway != null && highway in listOf(OsmValue.FOOTWAY.value, OsmValue.PEDESTRIAN.value)
         }
 
         val isNotAccessible: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.ACCESS.key] == OsmValue.NO.value
+            val access = tags[OsmTag.ACCESS.key] as? String
+            access == OsmValue.NO.value
         }
 
         private val isIndoor: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.INDOOR.key] == OsmValue.YES.value
+            val indoor = tags[OsmTag.INDOOR.key] as? String
+            indoor == OsmValue.YES.value
         }
 
         private val isPath: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] == OsmValue.PATH.value
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            highway == OsmValue.PATH.value
         }
 
         private val isTrack: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] == OsmValue.TRACK.value
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            highway == OsmValue.TRACK.value
         }
 
         private val canWalkRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) ||
-                    tags.any { (key, value) ->
-                        OsmTag.RIGHT_FOOT.key in key && value in listOf(
-                            OsmValue.YES.value,
-                            OsmValue.DESIGNATED.value
-                        )
-                    } ||
-                    tags[OsmTag.SIDEWALK.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value,
-                OsmValue.RIGHT.value,
-                OsmValue.LEFT.value
-            ) ||
-                    tags[OsmTag.SIDEWALK_RIGHT.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value,
-                OsmValue.RIGHT.value
-            ) ||
-                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value
-            )
+            val foot = tags[OsmTag.FOOT.key] as? String
+            val sidewalk = tags[OsmTag.SIDEWALK.key] as? String
+            val sidewalkRight = tags[OsmTag.SIDEWALK_RIGHT.key] as? String
+            val sidewalkBoth = tags[OsmTag.SIDEWALK_BOTH.key] as? String
+
+            (foot in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value)) ||
+                tags.any { (key, value) ->
+                    OsmTag.RIGHT_FOOT.key in key && value in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.DESIGNATED.value
+                    )
+                } ||
+                (
+                    sidewalk in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.SEPARATED.value,
+                        OsmValue.BOTH.value,
+                        OsmValue.RIGHT.value,
+                        OsmValue.LEFT.value
+                    )
+                    ) ||
+                (
+                    sidewalkRight in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.SEPARATED.value,
+                        OsmValue.BOTH.value,
+                        OsmValue.RIGHT.value
+                    )
+                    ) ||
+                (
+                    sidewalkBoth in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value)
+                    )
         }
 
         private val canWalkLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) ||
-                    tags.any { (key, value) ->
-                        OsmTag.LEFT_FOOT.key in key && value in listOf(
-                            OsmValue.YES.value,
-                            OsmValue.DESIGNATED.value
-                        )
-                    } ||
-                    tags[OsmTag.SIDEWALK.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value,
-                OsmValue.RIGHT.value,
-                OsmValue.LEFT.value
-            ) ||
-                    tags[OsmTag.SIDEWALK_LEFT.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value,
-                OsmValue.LEFT.value
-            ) ||
-                    tags[OsmTag.SIDEWALK_BOTH.key] in listOf(
-                OsmValue.YES.value,
-                OsmValue.SEPARATED.value,
-                OsmValue.BOTH.value
-            )
+            val foot = tags[OsmTag.FOOT.key] as? String
+            val sidewalk = tags[OsmTag.SIDEWALK.key] as? String
+            val sidewalkLeft = tags[OsmTag.SIDEWALK_LEFT.key] as? String
+            val sidewalkBoth = tags[OsmTag.SIDEWALK_BOTH.key] as? String
+
+            (foot in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value)) ||
+                tags.any { (key, value) ->
+                    OsmTag.LEFT_FOOT.key in key && value in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.DESIGNATED.value
+                    )
+                } ||
+                (
+                    sidewalk in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.SEPARATED.value,
+                        OsmValue.BOTH.value,
+                        OsmValue.RIGHT.value,
+                        OsmValue.LEFT.value
+                    )
+                    ) ||
+                (
+                    sidewalkLeft in listOf(
+                        OsmValue.YES.value,
+                        OsmValue.SEPARATED.value,
+                        OsmValue.BOTH.value,
+                        OsmValue.LEFT.value
+                    )
+                    ) ||
+                (
+                    sidewalkBoth in listOf(OsmValue.YES.value, OsmValue.SEPARATED.value, OsmValue.BOTH.value)
+                    )
         }
 
         private val canBike: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.BICYCLE.key] in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value) &&
-                    tags[OsmTag.HIGHWAY.key] !in listOf(OsmValue.MOTORWAY.value, OsmValue.MOTORWAY_LINK.value)
+            val bicycle = tags[OsmTag.BICYCLE.key] as? String
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+
+            (bicycle in listOf(OsmValue.YES.value, OsmValue.DESIGNATED.value)) &&
+                (highway !in listOf(OsmValue.MOTORWAY.value, OsmValue.MOTORWAY_LINK.value))
         }
 
         private val cannotBike: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.BICYCLE.key] in listOf(
-                OsmValue.NO.value,
-                OsmValue.DISMOUNT.value,
-                OsmValue.USE_SIDE_PATH.value
-            ) ||
-                    tags[OsmTag.HIGHWAY.key] in listOf(
-                OsmValue.CORRIDOR.value,
-                OsmValue.MOTORWAY.value,
-                OsmValue.MOTORWAY_LINK.value,
-                OsmValue.TRUNK.value,
-                OsmValue.TRUNK_LINK.value
-            ) ||
-                    tags[OsmTag.ACCESS.key] == OsmValue.CUSTOMERS.value
+            val bicycle = tags[OsmTag.BICYCLE.key] as? String
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            val access = tags[OsmTag.ACCESS.key] as? String
+
+            (
+                bicycle in listOf(OsmValue.NO.value, OsmValue.DISMOUNT.value, OsmValue.USE_SIDE_PATH.value)
+                ) ||
+                (
+                    highway in listOf(
+                        OsmValue.CORRIDOR.value,
+                        OsmValue.MOTORWAY.value,
+                        OsmValue.MOTORWAY_LINK.value,
+                        OsmValue.TRUNK.value,
+                        OsmValue.TRUNK_LINK.value
+                    )
+                    ) ||
+                (access == OsmValue.CUSTOMERS.value)
         }
 
         private val isObligatedSegregated: (Map<String, Any>) -> Boolean = { tags ->
             val trafficSign = tags[OsmTag.TRAFFIC_SIGN.key] as? String
             val trafficSignForward = tags[OsmTag.TRAFFIC_SIGN_FORWARD.key] as? String
 
-            (trafficSign != null && trafficSign == OsmValue.TWO_FOUR_ONE.value) ||
-                    (trafficSignForward != null && trafficSignForward == OsmValue.TWO_FOUR_ONE.value)
+            (trafficSign != null && trafficSign.contains(OsmValue.TWO_FOUR_ONE.value)) ||
+                (trafficSignForward != null && trafficSignForward.contains(OsmValue.TWO_FOUR_ONE.value))
         }
 
         private val isDesignated: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.BICYCLE.key] == OsmValue.DESIGNATED.value
+            val bicycle = tags[OsmTag.BICYCLE.key] as? String
+            bicycle == OsmValue.DESIGNATED.value
         }
 
         private val isBicycleDesignatedLeft: (Map<String, Any>) -> Boolean = { tags ->
-            isDesignated(tags) || tags[OsmTag.CYCLEWAY_LEFT_BICYCLE.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
+            val cyclewayLeftBicycle = tags[OsmTag.CYCLEWAY_LEFT_BICYCLE.key] as? String
+            val cyclewayBicycle = tags[OsmTag.CYCLEWAY_BICYCLE.key] as? String
+
+            isDesignated(tags) ||
+                (cyclewayLeftBicycle == OsmValue.DESIGNATED.value) ||
+                (cyclewayBicycle == OsmValue.DESIGNATED.value)
         }
 
         private val isBicycleDesignatedRight: (Map<String, Any>) -> Boolean = { tags ->
-            isDesignated(tags) || tags[OsmTag.CYCLEWAY_RIGHT_BICYCLE.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.CYCLEWAY_BICYCLE.key] == OsmValue.DESIGNATED.value
+            val cyclewayRightBicycle = tags[OsmTag.CYCLEWAY_RIGHT_BICYCLE.key] as? String
+            val cyclewayBicycle = tags[OsmTag.CYCLEWAY_BICYCLE.key] as? String
+
+            isDesignated(tags) ||
+                (cyclewayRightBicycle == OsmValue.DESIGNATED.value) ||
+                (cyclewayBicycle == OsmValue.DESIGNATED.value)
         }
 
         private val isPedestrianDesignatedLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.SIDEWALK_LEFT_FOOT.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
+            val foot = tags[OsmTag.FOOT.key] as? String
+            val sidewalkLeftFoot = tags[OsmTag.SIDEWALK_LEFT_FOOT.key] as? String
+            val sidewalkFoot = tags[OsmTag.SIDEWALK_FOOT.key] as? String
+
+            (foot == OsmValue.DESIGNATED.value) ||
+                (sidewalkLeftFoot == OsmValue.DESIGNATED.value) ||
+                (sidewalkFoot == OsmValue.DESIGNATED.value)
         }
 
         private val isPedestrianDesignatedRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.FOOT.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.SIDEWALK_RIGHT_FOOT.key] == OsmValue.DESIGNATED.value ||
-                    tags[OsmTag.SIDEWALK_FOOT.key] == OsmValue.DESIGNATED.value
+            val foot = tags[OsmTag.FOOT.key] as? String
+            val sidewalkRightFoot = tags[OsmTag.SIDEWALK_RIGHT_FOOT.key] as? String
+            val sidewalkFoot = tags[OsmTag.SIDEWALK_FOOT.key] as? String
+
+            (foot == OsmValue.DESIGNATED.value) ||
+                (sidewalkRightFoot == OsmValue.DESIGNATED.value) ||
+                (sidewalkFoot == OsmValue.DESIGNATED.value)
         }
 
         private val isServiceTag: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] == OsmValue.SERVICE.value
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            highway == OsmValue.SERVICE.value
         }
 
         private val isAgricultural: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.MOTOR_VEHICLE.key] in listOf(OsmValue.AGRICULTURAL.value, OsmValue.FORESTRY.value)
+            val motorVehicle = tags[OsmTag.MOTOR_VEHICLE.key] as? String
+            motorVehicle in listOf(OsmValue.AGRICULTURAL.value, OsmValue.FORESTRY.value)
         }
 
         private val isAccessible: (Map<String, Any>) -> Boolean = { tags ->
             val accessValue = tags[OsmTag.ACCESS.key] as? String
-            accessValue.isNullOrEmpty() || !isNotAccessible(tags)
+            accessValue == null || !isNotAccessible(tags)
         }
 
         private val isSmooth: (Map<String, Any>) -> Boolean = { tags ->
             val trackType = tags[OsmTag.TRACK_TYPE.key] as? String
-            trackType.isNullOrEmpty() || trackType in listOf(OsmValue.GRADE1.value, OsmValue.GRADE2.value)
+            trackType == null || trackType in listOf(OsmValue.GRADE1.value, OsmValue.GRADE2.value)
         }
 
         private val isVehicleAllowed: (Map<String, Any>) -> Boolean = { tags ->
             val motorVehicle = tags[OsmTag.MOTOR_VEHICLE.key] as? String
-            motorVehicle.isNullOrEmpty() || motorVehicle != OsmValue.NO.value
+            motorVehicle == null || motorVehicle != OsmValue.NO.value
         }
 
         val isService: (Map<String, Any>) -> Boolean = { tags ->
-            (isServiceTag(tags) ||
+            val designated = isDesignated(tags)
+            (
+                isServiceTag(tags) ||
                     (isAgricultural(tags) && isAccessible(tags)) ||
                     (isPath(tags) && isAccessible(tags)) ||
-                    (isTrack(tags) && isAccessible(tags) && isSmooth(tags) && isVehicleAllowed(tags))) &&
-                    !isDesignated(tags)
+                    (isTrack(tags) && isAccessible(tags) && isSmooth(tags) && isVehicleAllowed(tags))
+                ) &&
+                !designated
         }
 
         private val canCarDrive: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] in listOf(
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            highway in listOf(
                 OsmValue.MOTORWAY.value,
                 OsmValue.TRUNK.value,
                 OsmValue.PRIMARY.value,
@@ -621,103 +678,127 @@ enum class BikeInfrastructure(
         }
 
         val isPathNotForbidden: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] in listOf(
-                OsmValue.CYCLEWAY.value,
-                OsmValue.TRACK.value,
-                OsmValue.PATH.value
-            ) && !cannotBike(tags)
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            (
+                highway in listOf(OsmValue.CYCLEWAY.value, OsmValue.TRACK.value, OsmValue.PATH.value)
+                ) &&
+                !cannotBike(tags)
         }
 
         private val isBikePathRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] == OsmValue.CYCLEWAY.value ||
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayRight = tags[OsmTag.CYCLEWAY_RIGHT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (highway == OsmValue.CYCLEWAY.value) ||
+                (
                     tags.any { (key, value) ->
                         OsmTag.RIGHT_BICYCLE.key in key && value == OsmValue.DESIGNATED.value
                     } &&
-                    tags.none { (key, _) -> key == OsmTag.CYCLEWAY_RIGHT_LANE.key } ||
-                    tags[OsmTag.CYCLEWAY.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) ||
-                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) || tags.any { (key, value) ->
-                OsmTag.RIGHT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
-            }
+                        tags.none { (key, _) -> key == OsmTag.CYCLEWAY_RIGHT_LANE.key }
+                    ) ||
+                (
+                    cycleway in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)
+                    ) ||
+                (
+                    cyclewayRight in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)
+                    ) ||
+                (
+                    cyclewayBoth in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)
+                    ) ||
+                tags.any { (key, value) ->
+                    OsmTag.RIGHT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
+                }
         }
 
         private val isBikePathLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.HIGHWAY.key] == OsmValue.CYCLEWAY.value ||
+            val highway = tags[OsmTag.HIGHWAY.key] as? String
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayLeft = tags[OsmTag.CYCLEWAY_LEFT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (highway == OsmValue.CYCLEWAY.value) ||
+                (
                     tags.any { (key, value) -> OsmTag.LEFT_BICYCLE.key in key && value == OsmValue.DESIGNATED.value } &&
-                    tags.none { (key, _) -> key == OsmTag.CYCLEWAY_LEFT_LANE.key } ||
-                    tags[OsmTag.CYCLEWAY.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) ||
-                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(
-                OsmValue.TRACK.value,
-                OsmValue.SIDE_PATH.value,
-                OsmValue.CROSSING.value
-            ) || tags.any { (key, value) ->
-                OsmTag.LEFT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
-            }
+                        tags.none { (key, _) -> key == OsmTag.CYCLEWAY_LEFT_LANE.key }
+                    ) ||
+                (cycleway in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)) ||
+                (cyclewayLeft in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)) ||
+                (cyclewayBoth in listOf(OsmValue.TRACK.value, OsmValue.SIDE_PATH.value, OsmValue.CROSSING.value)) ||
+                tags.any { (key, value) ->
+                    OsmTag.LEFT_TRAFFIC_SIGN.key in key && value == OsmValue.TWO_THREE_SEVEN.value
+                }
         }
 
         val isPedestrianRight: (Map<String, Any>) -> Boolean = { tags ->
-            (isFootpath(tags) && !canBike(tags) && !isIndoor(tags)) ||
-                    (isPath(tags) && canWalkRight(tags) && !canBike(tags) && !isIndoor(tags))
+            !isIndoor(tags) && (
+                (isFootpath(tags) && !canBike(tags)) ||
+                    (isPath(tags) && canWalkRight(tags) && !canBike(tags))
+                )
         }
 
         val isPedestrianLeft: (Map<String, Any>) -> Boolean = { tags ->
-            (isFootpath(tags) && !canBike(tags) && !isIndoor(tags)) ||
-                    (isPath(tags) && canWalkLeft(tags) && !canBike(tags) && !isIndoor(tags))
+            !isIndoor(tags) && (
+                (isFootpath(tags) && !canBike(tags)) || (isPath(tags) && canWalkLeft(tags) && !canBike(tags))
+                )
         }
 
         val isCycleHighway: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLE_HIGHWAY.key] == OsmValue.YES.value
+            val cycleHighway = tags[OsmTag.CYCLE_HIGHWAY.key] as? String
+            cycleHighway == OsmValue.YES.value
         }
 
         val isBikeRoad: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.BICYCLE_ROAD.key] == OsmValue.YES.value || tags[OsmTag.CYCLESTREET.key] == OsmValue.YES.value
+            val bicycleRoad = tags[OsmTag.BICYCLE_ROAD.key] as? String
+            val cycleStreet = tags[OsmTag.CYCLESTREET.key] as? String
+            bicycleRoad == OsmValue.YES.value || cycleStreet == OsmValue.YES.value
         }
 
         val isBikeLaneRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags[OsmTag.CYCLEWAY_RIGHT.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags.any { (key, value) -> OsmTag.RIGHT_LANE.key in key && value == OsmValue.EXCLUSIVE.value }
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayRight = tags[OsmTag.CYCLEWAY_RIGHT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (cycleway in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                (cyclewayRight in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                (cyclewayBoth in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                tags.any { (key, value) ->
+                    OsmTag.RIGHT_LANE.key in key && value == OsmValue.EXCLUSIVE.value
+                }
         }
 
         val isBikeLaneLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags[OsmTag.CYCLEWAY_LEFT.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags[OsmTag.CYCLEWAY_BOTH.key] in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value) ||
-                    tags.any { (key, value) -> OsmTag.LEFT_LANE.key in key && value == OsmValue.EXCLUSIVE.value }
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayLeft = tags[OsmTag.CYCLEWAY_LEFT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (cycleway in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                (cyclewayLeft in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                (cyclewayBoth in listOf(OsmValue.LANE.value, OsmValue.SHARED_LANE.value)) ||
+                tags.any { (key, value) ->
+                    OsmTag.LEFT_LANE.key in key && value == OsmValue.EXCLUSIVE.value
+                }
         }
 
         val isBusLaneRight: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value ||
-                    tags[OsmTag.CYCLEWAY_RIGHT.key] == OsmValue.SHARE_BUS_WAY.value
-                    || tags[OsmTag.CYCLEWAY_BOTH.key] == OsmValue.SHARE_BUS_WAY.value
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayRight = tags[OsmTag.CYCLEWAY_RIGHT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (cycleway == OsmValue.SHARE_BUS_WAY.value) ||
+                (cyclewayRight == OsmValue.SHARE_BUS_WAY.value) ||
+                (cyclewayBoth == OsmValue.SHARE_BUS_WAY.value)
         }
 
         val isBusLaneLeft: (Map<String, Any>) -> Boolean = { tags ->
-            tags[OsmTag.CYCLEWAY.key] == OsmValue.SHARE_BUS_WAY.value ||
-                    tags[OsmTag.CYCLEWAY_LEFT.key] == OsmValue.SHARE_BUS_WAY.value
-                    || tags[OsmTag.CYCLEWAY_BOTH.key] == OsmValue.SHARE_BUS_WAY.value
+            val cycleway = tags[OsmTag.CYCLEWAY.key] as? String
+            val cyclewayLeft = tags[OsmTag.CYCLEWAY_LEFT.key] as? String
+            val cyclewayBoth = tags[OsmTag.CYCLEWAY_BOTH.key] as? String
+
+            (cycleway == OsmValue.SHARE_BUS_WAY.value) ||
+                (cyclewayLeft == OsmValue.SHARE_BUS_WAY.value) ||
+                (cyclewayBoth == OsmValue.SHARE_BUS_WAY.value)
         }
     }
 }
