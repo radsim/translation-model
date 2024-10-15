@@ -47,5 +47,5 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
         env:
-          USERNAME: ${{ secrets.GH_PACKAGES_READ_ACCOUNT }}
-          PASSWORD: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
+          USERNAME: ${{ github.actor }}
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
