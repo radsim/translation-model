@@ -52,7 +52,7 @@ version = "0.0.0" // Automatically overwritten by CI
 // --- Dependency Versions ---
 
 extra["gradleWrapperVersion"] = "7.6.1"
-extra["cyfaceBackendVersion"] = "6.1.6"
+extra["cyfaceSerializationVersion"] = "3.4.2"
 
 // Versions of testing dependencies
 extra["junitVersion"] = "5.9.2"
@@ -95,7 +95,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
 
     // Cyface Dependencies
-    implementation("de.cyface:map-matching:${project.extra["cyfaceBackendVersion"]}") // OsmTag class
+    implementation("de.cyface:model:${project.extra["cyfaceSerializationVersion"]}") // OsmTag class, mm-output
 
     // Testing Dependencies
     testImplementation(platform("org.junit:junit-bom:${project.extra["junitVersion"]}"))
@@ -148,8 +148,8 @@ repositories {
     }
     mavenCentral()
     maven {
-        name = "github-backend"
-        url = uri("https://maven.pkg.github.com/cyface-de/backend")
+        name = "github-serializer"
+        url = uri("https://maven.pkg.github.com/cyface-de/serializer")
         credentials {
             username = (project.findProperty("gpr.user") ?: System.getenv("USERNAME")) as String?
             password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String?

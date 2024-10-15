@@ -46,12 +46,6 @@ jobs:
         run: |
           sed -i "s/version = \"0.0.0\"/version = \"${{ github.ref_name }}\"/g" build.gradle.kts
 
-      - name: Build with Gradle
-        run: ./gradlew build
-        env:
-          USERNAME: ${{ secrets.GH_PACKAGES_READ_ACCOUNT }}
-          PASSWORD: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
-
       # Publish slim JARS to GitHub Package Registry
       - name: Publish package
         run: ./gradlew publish
