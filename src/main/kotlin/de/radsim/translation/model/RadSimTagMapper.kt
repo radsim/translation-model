@@ -89,9 +89,7 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                                 }
 
                                 else -> {
-                                    error {
-                                        "Unexpected RadSim tag: $radsSimTag"
-                                    }
+                                    error("Unexpected RadSim tag: $radsSimTag")
                                 }
                             }
                         }
