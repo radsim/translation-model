@@ -92,7 +92,14 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
         /**
          * The alternative OSM tag used to estimate the surface type when no other surface tags are set.
          */
-        private const val ALTERNATIVE_OSM_TAG = "highway"
+        private val ALTERNATIVE_OSM_TAGS_COMFORT_1 =
+            setOf(OsmTag("cycle_highway", "yes"), OsmTag("bicycle_road", "yes"))
+
+        /**
+         * The alternative OSM tag used to estimate the surface type when no other surface tags are set.
+         */
+        private val ALTERNATIVE_OSM_TAGS_COMFORT_2 =
+            setOf(OsmTag("highway", "path"), OsmTag("highway", "track"))
 
         /**
          * Mappings used to map from OSM attributes to surface types.
@@ -203,10 +210,16 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
                 }
             }
 
+            // If none of these tags exist/value is unknown, guess based on `cycle_highway`/`bicycle_road` [BIK-1150]
+            ALTERNATIVE_OSM_TAGS_COMFORT_1.forEach { lookup ->
+                if (tags[lookup.key] == lookup.value) {
+                    return COMFORT_1_ASPHALT
+                }
+            }
+
             // If none of these tags exist or the value is not known, guess based on `highway` tag [BIK-1088]
-            if (tags.containsKey(ALTERNATIVE_OSM_TAG)) {
-                val highwayValue = tags[ALTERNATIVE_OSM_TAG].toString()
-                if (highwayValue == "path" || highwayValue == "track") {
+            ALTERNATIVE_OSM_TAGS_COMFORT_2.forEach { lookup ->
+                if (tags[lookup.key] == lookup.value) {
                     return COMFORT_2_COMPACTED
                 }
             }
