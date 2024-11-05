@@ -117,30 +117,6 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                                 else -> throw IllegalArgumentException("Unknown RadSim tag: $radsSimTag")
                             }
 
-                        // To check the penalty during routing, see:
-                        // https://github.com/abrensch/brouter/blob/372a04a6cf4608cf14bc7045aed9499012a23f52/misc/profiles2/fastbike-verylowtraffic.brf#L197
-                        SurfaceQuality.RADSIM_TAG ->
-                            when (value) {
-                                SurfaceQuality.GOOD.value -> {
-                                    osmTags.add(SurfaceQuality.GOOD.backMappingTag!!)
-                                }
-
-                                SurfaceQuality.MEDIUM.value -> {
-                                    osmTags.add(SurfaceQuality.MEDIUM.backMappingTag!!)
-                                }
-
-                                SurfaceQuality.BAD.value -> {
-                                    // To cover the whole range. "Bad" originate ~ 50:50 from "bad", "very_bad"
-                                    osmTags.add(SurfaceQuality.BAD.backMappingTag!!)
-                                }
-
-                                else -> {
-                                    require(SurfaceQuality.NO_INFORMATION.value == value) {
-                                        "Unknown RadSim tag: $radsSimTag"
-                                    }
-                                }
-                            }
-
                         Speed.RADSIM_TAG -> when (value) {
                             Speed.MAX_SPEED_MIV_LTE_30.value -> {
                                 osmTags.add(Speed.MAX_SPEED_MIV_LTE_30.backMappingTag!!)
@@ -193,17 +169,6 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
         val original = HashMap<String, Any>()
         tags.forEach(Consumer { osmTag: OsmTag -> original[osmTag.key] = osmTag.value })
         val originalTags = HashMap<String, String>()
-
-        when (SurfaceQuality.toRadSim(original)) {
-            SurfaceQuality.GOOD ->
-                originalTags[SurfaceQuality.RADSIM_TAG] = SurfaceQuality.GOOD.value
-            SurfaceQuality.MEDIUM ->
-                originalTags[SurfaceQuality.RADSIM_TAG] = SurfaceQuality.MEDIUM.value
-            SurfaceQuality.BAD ->
-                originalTags[SurfaceQuality.RADSIM_TAG] = SurfaceQuality.BAD.value
-            else ->
-                originalTags[SurfaceQuality.RADSIM_TAG] = SurfaceQuality.NO_INFORMATION.value
-        }
 
         // `findSurfaceType` ensures the osm tags are checked hierarchically [BIK-1086]
         when (SurfaceType.toRadSim(original)) {
