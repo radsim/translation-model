@@ -156,7 +156,8 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
                         else -> throw IllegalArgumentException("Unknown value for OSM tag `maxspeed`: $intValue")
                     }
                 }
-                throw IllegalArgumentException("Unknown value for OSM tag `maxspeed`: ${tags[osmKey]}")
+                print("Unknown value for OSM tag `maxspeed`: ${tags[osmKey]}, defaulting to NO_INFORMATION")
+                return NO_INFORMATION
             }
 
             // Check "highway" for alternative speed information

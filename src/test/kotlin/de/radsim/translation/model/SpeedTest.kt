@@ -78,6 +78,8 @@ class SpeedTest {
                 SpeedParameters(mapOf("maxspeed" to "unknown"), NO_INFORMATION),
                 SpeedParameters(mapOf("maxspeed" to "none"), NO_INFORMATION),
                 SpeedParameters(mapOf("maxspeed" to "signals"), NO_INFORMATION),
+                // Happens in Eschborn 2024-01-01 once
+                SpeedParameters(mapOf("maxspeed" to "Schrittgeschwindigkeit"), NO_INFORMATION),
                 SpeedParameters(mapOf(), NO_INFORMATION),
             )
         }
