@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Cyface GmbH
+ * Copyright (C) 2024-2025 Cyface GmbH
  *
  * This file is part of the RadSim Translation Model.
  *
@@ -19,60 +19,92 @@
 package de.radsim.translation.model
 
 import de.cyface.model.osm.OsmTag
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class SimplifiedBikeInfrastructureTest {
-    @ParameterizedTest
-    @MethodSource("backMappingParameters")
-    fun testBackMapping(parameter: BackMappingInfrastructureParameters) {
-        // Arrange
-        // Act
-        val result = parameter.radSimTag.backMappingTag
 
-        // Assert
-        assert(result == parameter.osmTags)
+    @Test
+    fun `NO to BicycleRoad should produce base tags`() {
+        val result = applyBackMap(SimplifiedBikeInfrastructure.NO, SimplifiedBikeInfrastructure.BICYCLE_ROAD)
+        assertEquals(
+            setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes")),
+            result
+        )
     }
 
-    companion object {
-        @JvmStatic
-        fun backMappingParameters(): Stream<BackMappingInfrastructureParameters> {
-            return Stream.of(
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
-                    setOf(OsmTag("cycle_highway", "yes"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.BICYCLE_ROAD,
-                    setOf(OsmTag("bicycle_road", "yes"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.BICYCLE_WAY,
-                    setOf(OsmTag("highway", "cycleway"), OsmTag("segregated", "yes"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.BICYCLE_LANE,
-                    setOf(OsmTag("cycleway", "lane"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.BUS_LANE,
-                    setOf(OsmTag("cycleway", "share_busway"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.MIXED_WAY,
-                    setOf(OsmTag("highway", "footway"), OsmTag("bicycle", "yes"))
-                ),
-                BackMappingInfrastructureParameters(
-                    SimplifiedBikeInfrastructure.NO,
-                    setOf(OsmTag("highway", "service"))
-                )
-            )
-        }
+    @Test
+    fun `NO to CycleHighway should set cycle_highway tag`() {
+        val result = applyBackMap(SimplifiedBikeInfrastructure.NO, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
+        assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
+    }
+
+    @Test
+    fun `BicycleLane to MixedWay should remove lane and set foot+bicycle`() {
+        val current = mapOf("cycleway" to "lane")
+        val result = recursiveBackMap(
+            SimplifiedBikeInfrastructure.BICYCLE_LANE,
+            SimplifiedBikeInfrastructure.MIXED_WAY,
+            current
+        )
+        assertEquals(
+            setOf(OsmTag("highway", "footway"), OsmTag("bicycle", "yes"), OsmTag("segregated", "no")),
+            result
+        )
+    }
+
+    @Test
+    fun `MixedWay to NO should return empty set`() {
+        val result = applyBackMap(SimplifiedBikeInfrastructure.MIXED_WAY, SimplifiedBikeInfrastructure.NO)
+        assertEquals(emptySet<OsmTag>(), result)
+    }
+
+    @Test
+    fun `BicycleWay to BicycleLane should apply highway+cycleway lane`() {
+        val current = mapOf("highway" to "cycleway")
+        val result = recursiveBackMap(
+            SimplifiedBikeInfrastructure.BICYCLE_WAY,
+            SimplifiedBikeInfrastructure.BICYCLE_LANE,
+            current
+        )
+        assertEquals(
+            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "lane")),
+            result
+        )
+    }
+
+    @Test
+    fun `BusLane to CycleHighway should only add cycle_highway tag`() {
+        val result = applyBackMap(SimplifiedBikeInfrastructure.BUS_LANE, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
+        assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
+    }
+
+    @Test
+    fun `NO to NO should be idempotent`() {
+        val result = recursiveBackMap(
+            SimplifiedBikeInfrastructure.NO,
+            SimplifiedBikeInfrastructure.NO,
+            emptyMap()
+        )
+        assertEquals(emptySet<OsmTag>(), result)
+    }
+
+    /**
+     * Convenience wrapper around recursiveBackMap using empty starting tag set.
+     */
+    private fun applyBackMap(
+        from: SimplifiedBikeInfrastructure,
+        to: SimplifiedBikeInfrastructure
+    ): Set<OsmTag> = recursiveBackMap(from, to, emptyMap())
+
+    /**
+     * Local copy of recursiveBackMap identical to RadSimTagMapper, so we can test it standalone.
+     */
+    private fun recursiveBackMap(
+        from: SimplifiedBikeInfrastructure,
+        to: SimplifiedBikeInfrastructure,
+        currentTags: Map<String, Any>
+    ): Set<OsmTag> {
+        return RadSimTagMapper(emptyList()).recursiveBackMap(from, to, currentTags)
     }
 }
-
-data class BackMappingInfrastructureParameters(
-    val radSimTag: SimplifiedBikeInfrastructure,
-    val osmTags: Set<OsmTag>
-)

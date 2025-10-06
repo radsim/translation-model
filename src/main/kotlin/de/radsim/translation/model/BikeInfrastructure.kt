@@ -202,7 +202,6 @@ enum class BikeInfrastructure(
         /**
          * All OSM Tag values used to determine the RadSim infrastructure type.
          */
-        @Suppress("SpellCheckingInspection")
         enum class OsmValue(val value: String) {
             AGRICULTURAL("agricultural"),
             BOTH("both"),
