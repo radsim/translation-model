@@ -33,7 +33,6 @@ class BackMappingMatrixTest {
                 DynamicTest.dynamicTest("$from → $to") {
                     assertDoesNotThrow {
                         val tags = RadSimTagMapper(emptyList()).recursiveBackMap(from, to, emptyMap())
-                        // tags may be empty for some transitions (e.g. MixedWay→NO), but must not throw or stall
                         tags.forEach {
                             require(!(it.value is String && (it.value as String).isEmpty())) {
                                 "Empty-value tag leaked into final result: $it (from=$from, to=$to)"

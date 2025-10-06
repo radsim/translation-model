@@ -98,6 +98,9 @@ object BackMappingRules {
         RuleKey(SimplifiedBikeInfrastructure.BICYCLE_WAY, SimplifiedBikeInfrastructure.NO) to { _ ->
             emptySet()
         },
+        RuleKey(SimplifiedBikeInfrastructure.BICYCLE_WAY, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY) to { _ ->
+            setOf(OsmTag("cycle_highway", "yes"))
+        },
 
         // -------------------------------------------------------------------
         // R11–R13: BICYCLE_LANE → others
@@ -180,7 +183,45 @@ object BackMappingRules {
         },
         RuleKey(SimplifiedBikeInfrastructure.MIXED_WAY, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY) to { _ ->
             setOf(OsmTag("bicycle", "designated"), OsmTag("foot", "designated"), OsmTag("segregated", "no"))
-        }
+        },
+
+        // -------------------------------------------------------------------
+        // CYCLE_HIGHWAY → others (R2–R7)
+        // -------------------------------------------------------------------
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.BICYCLE_ROAD) to { tags ->
+            // R2 + R3: remove bicycle_road, then add highway=cycleway, segregated=yes
+            val highway = tags["highway"] ?: "residential"
+            setOf(OsmTag("highway", highway), OsmTag("bicycle_road", "yes"))
+        },
+
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.BICYCLE_WAY) to { _ ->
+            // R3
+            setOf(OsmTag("highway", "cycleway"), OsmTag("segregated", "yes"))
+        },
+
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.BICYCLE_LANE) to { tags ->
+            // R4
+            val highway = tags["highway"] ?: "secondary"
+            val cleaned = if (highway == "cycleway") setOf(OsmTag("highway", "secondary")) else emptySet()
+            cleaned + OsmTag("cycleway", "lane")
+        },
+
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.BUS_LANE) to { tags ->
+            // R5
+            val highway = tags["highway"] ?: "secondary"
+            val cleaned = if (highway == "cycleway") setOf(OsmTag("highway", "secondary")) else emptySet()
+            cleaned + OsmTag("cycleway", "share_busway")
+        },
+
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.MIXED_WAY) to { _ ->
+            // R6
+            setOf(OsmTag("highway", "cycleway"), OsmTag("foot", "yes"), OsmTag("segregated", "no"))
+        },
+
+        RuleKey(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY, SimplifiedBikeInfrastructure.NO) to { _ ->
+            // R7
+            setOf(OsmTag("highway", "path"), OsmTag("bicycle", ""))
+        },
     )
 
     fun applyRule(
