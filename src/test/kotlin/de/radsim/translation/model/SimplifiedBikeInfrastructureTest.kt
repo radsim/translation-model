@@ -48,7 +48,13 @@ class SimplifiedBikeInfrastructureTest {
             current
         )
         assertEquals(
-            setOf(OsmTag("highway", "footway"), OsmTag("bicycle", "yes"), OsmTag("segregated", "no")),
+            setOf(
+                OsmTag("highway", "path"),
+                OsmTag("bicycle", "yes"),
+                OsmTag("segregated", "no"),
+                OsmTag("highway", "cycleway"),
+                OsmTag("foot", "yes")
+            ),
             result
         )
     }
