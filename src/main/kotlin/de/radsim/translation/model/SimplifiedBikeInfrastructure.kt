@@ -19,8 +19,6 @@
 
 package de.radsim.translation.model
 
-import de.cyface.model.osm.OsmTag
-
 /**
  * An enum with the infrastructure types in the "simplified" format.
  *
@@ -47,47 +45,45 @@ import de.cyface.model.osm.OsmTag
  * For mapping from OSM to Radsim, use [BikeInfrastructure].
  *
  * @property value The value for the RadSim infrastructure type tag.
- * @property backMappingTag The OSM tag used to back-map the RadSim infrastructure type to OSM.
  */
-enum class SimplifiedBikeInfrastructure(val value: String, val backMappingTag: Set<OsmTag>) {
+enum class SimplifiedBikeInfrastructure(val value: String) {
 
     /**
      * Infrastructure type where bikes have their own "highway".
      */
-    CYCLE_HIGHWAY("CycleHighway", setOf(OsmTag("cycle_highway", "yes"))),
+    CYCLE_HIGHWAY("CycleHighway"),
 
     /**
      * Infrastructure where bikes have a road which is specifically designated for bicycles.
      */
-    BICYCLE_ROAD("BicycleRoad", setOf(OsmTag("bicycle_road", "yes"))),
+    BICYCLE_ROAD("BicycleRoad"),
 
     /**
      * Infrastructure type where bicycles have an exclusive track, segregated from other traffic.
      */
-    BICYCLE_WAY("BicycleWay", setOf(OsmTag("highway", "cycleway"), OsmTag("segregated", "yes"))),
+    BICYCLE_WAY("BicycleWay"),
 
     /**
      * Infrastructure type where bicycles have a designated lane on the road.
      */
-    BICYCLE_LANE("BicycleLane", setOf(OsmTag("cycleway", "lane"))),
+    BICYCLE_LANE("BicycleLane"),
 
     /**
      * Infrastructure type where bicycles share a lane with buses.
      */
-    @Suppress("SpellCheckingInspection")
-    BUS_LANE("BusLane", setOf(OsmTag("cycleway", "share_busway"))),
+    BUS_LANE("BusLane"),
 
     /**
      * Infrastructure type where bicycles share a lane with pedestrians or other traffic.
      */
-    MIXED_WAY("MixedWay", setOf(OsmTag("highway", "footway"), OsmTag("bicycle", "yes"))),
+    MIXED_WAY("MixedWay"),
 
     /**
      * Infrastructure type where no bike infrastructure is available.
      *
      * Includes the sub-categories `MISC_SERVICE`, `MIT_ROAD`, `PEDESTRIAN` and `PATH_NOT_FORBIDDEN`
      */
-    NO("No", setOf(OsmTag("highway", "service"))),
+    NO("No"),
     ;
 
     companion object {

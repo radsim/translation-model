@@ -19,6 +19,7 @@
 package de.radsim.translation.model
 
 import de.cyface.model.osm.OsmTag
+import org.slf4j.LoggerFactory
 import java.util.function.BiConsumer
 import java.util.function.BinaryOperator
 import java.util.function.Consumer
@@ -54,44 +55,34 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                         // For an overview see https://wiki.openstreetmap.org/wiki/Bicycle
                         SimplifiedBikeInfrastructure.RADSIM_TAG -> {
                             // Attention:
-                            // [backend.RadSimTagMerger.merge] already implements the first step of the simplified
-                            // back-mapping: all tags which interfere with the [BikeInfrastructure] mapping are removed
+                            // [backend.RadSimTagMerger.merge] already implements the first step of the back-mapping:
+                            // Remove any *:left/*:right/*:both/*:cycleway key tags.
                             // For more details about the back-mapping see [SimplifiedBikeInfrastructure].
 
-                            // Then write the relevant OSM tags to ensure the new category is returned during mapping.
-                            when (value) {
-                                SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.BICYCLE_ROAD.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_ROAD.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.BICYCLE_WAY.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_WAY.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.BICYCLE_LANE.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.BICYCLE_LANE.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.BUS_LANE.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.BUS_LANE.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.MIXED_WAY.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.MIXED_WAY.backMappingTag)
-                                }
-
-                                SimplifiedBikeInfrastructure.NO.value -> {
-                                    osmTags.addAll(SimplifiedBikeInfrastructure.NO.backMappingTag)
-                                }
-
-                                else -> {
-                                    error("Unexpected RadSim tag: $radsSimTag")
-                                }
+                            // Then apply the from-to category rules until the target category is reached.
+                            // We only write simple (side-agnostic) tags (see new rules 2025-08-21).
+                            val targetInfra = when (value) {
+                                SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value ->
+                                    SimplifiedBikeInfrastructure.CYCLE_HIGHWAY
+                                SimplifiedBikeInfrastructure.BICYCLE_ROAD.value ->
+                                    SimplifiedBikeInfrastructure.BICYCLE_ROAD
+                                SimplifiedBikeInfrastructure.BICYCLE_WAY.value ->
+                                    SimplifiedBikeInfrastructure.BICYCLE_WAY
+                                SimplifiedBikeInfrastructure.BICYCLE_LANE.value ->
+                                    SimplifiedBikeInfrastructure.BICYCLE_LANE
+                                SimplifiedBikeInfrastructure.BUS_LANE.value ->
+                                    SimplifiedBikeInfrastructure.BUS_LANE
+                                SimplifiedBikeInfrastructure.MIXED_WAY.value ->
+                                    SimplifiedBikeInfrastructure.MIXED_WAY
+                                SimplifiedBikeInfrastructure.NO.value ->
+                                    SimplifiedBikeInfrastructure.NO
+                                else -> error("Unexpected RadSim tag: $radsSimTag")
                             }
+
+                            val originalTagMap = osmTags.associate { it.key to it.value } // or original tags if known
+                            val fromInfra = BikeInfrastructure.toRadSim(originalTagMap).simplified
+
+                            osmTags.addAll(recursiveBackMap(fromInfra, targetInfra, originalTagMap))
                         }
 
                         // To check the penalty during routing, see:
@@ -159,6 +150,47 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
         })
     }
 
+    fun recursiveBackMap(
+        from: SimplifiedBikeInfrastructure,
+        to: SimplifiedBikeInfrastructure,
+        currentTags: Map<String, Any>,
+        visited: MutableSet<Pair<SimplifiedBikeInfrastructure, Map<String, Any>>> = mutableSetOf()
+    ): Set<OsmTag> {
+        if (from == to) return emptySet()
+
+        val state = from to currentTags
+        if (!visited.add(state)) {
+            error("Back-mapping recursion detected: $from → $to (state revisited)")
+        }
+
+        val delta = BackMappingRules.applyRule(from, to, currentTags)
+        val updatedTags = currentTags.toMutableMap()
+        delta.forEach { tag ->
+            if (tag.value is String && (tag.value as String).isEmpty()) { // Allow tag removal with empty value delta
+                updatedTags.remove(tag.key)
+            } else {
+                updatedTags[tag.key] = tag.value
+            }
+        }
+        val next = BikeInfrastructure.toRadSim(updatedTags).simplified
+
+        if (next == from) {
+            LOGGER.error(
+                "Stall: from=$from to=$to\nCurrent=$currentTags\nDelta=$delta\nUpdated=$updatedTags\nNext=$next"
+            )
+            error("Back-mapping stalled: $from → $to produced no category change")
+        }
+
+        // Remove tag removal signals (empty value String)
+        return if (next == to) {
+            delta.filterNot { it.value is String && (it.value as String).isEmpty() }.toSet()
+        } else {
+            (delta + recursiveBackMap(next, to, updatedTags, visited))
+                .filterNot { it.value is String && (it.value as String).isEmpty() }
+                .toSet()
+        }
+    }
+
     /**
      * Maps the `OsmTag`s to `RadSimTag`s.
      *
@@ -198,5 +230,12 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                 originalTags[Speed.RADSIM_TAG] = Speed.NO_INFORMATION.value
         }
         return originalTags
+    }
+
+    companion object {
+        /**
+         * The logger used by objects of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
+         */
+        private val LOGGER = LoggerFactory.getLogger(RadSimTagMapper::class.java)
     }
 }
