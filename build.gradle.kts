@@ -52,7 +52,7 @@ version = "0.0.0" // Automatically overwritten by CI
 // --- Dependency Versions ---
 
 extra["gradleWrapperVersion"] = "7.6.1"
-extra["cyfaceSerializationVersion"] = "4.1.12-alpha3" // FIXME: alpha for testing
+extra["cyfaceSerializationVersion"] = "4.1.11"
 extra["logbackVersion"] = "1.5.13"
 
 // Versions of testing dependencies

@@ -40,7 +40,7 @@ class SimplifiedBikeInfrastructureTest {
     }
 
     @Test
-    fun `BicycleLane to MixedWay should remove lane and set foot+bicycle`() {
+    fun `BicycleLane to MixedWay should remove lane and set shared path tags`() {
         val current = mapOf("cycleway" to "lane")
         val result = recursiveBackMap(
             SimplifiedBikeInfrastructure.BICYCLE_LANE,
@@ -50,19 +50,22 @@ class SimplifiedBikeInfrastructureTest {
         assertEquals(
             setOf(
                 OsmTag("highway", "path"),
-                OsmTag("bicycle", "yes"),
+                OsmTag("bicycle", "yes"), // from lane removal step (R7)
                 OsmTag("segregated", "no"),
-                OsmTag("highway", "cycleway"),
-                OsmTag("foot", "yes")
+                OsmTag("bicycle", "designated"), // from R22 (NO→MIXED_WAY)
+                OsmTag("foot", "designated")
             ),
             result
         )
     }
 
     @Test
-    fun `MixedWay to NO should return empty set`() {
+    fun `MixedWay to NO should return R7 tags`() {
         val result = applyBackMap(SimplifiedBikeInfrastructure.MIXED_WAY, SimplifiedBikeInfrastructure.NO)
-        assertEquals(emptySet<OsmTag>(), result)
+        assertEquals(
+            setOf(OsmTag("highway", "path")),
+            result
+        )
     }
 
     @Test
