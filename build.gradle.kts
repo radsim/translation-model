@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Cyface GmbH
+ * Copyright (C) 2019-2025 Cyface GmbH
  *
  * This file is part of the RadSim Translation Model.
  *
@@ -40,7 +40,7 @@ plugins {
     id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
     id("maven-publish")
-    kotlin("jvm").version("1.9.21")
+    kotlin("jvm").version("2.1.20")
 
     id("io.gitlab.arturbosch.detekt").version("1.23.1")
     id("org.jetbrains.dokka").version("1.9.10")
@@ -52,7 +52,8 @@ version = "0.0.0" // Automatically overwritten by CI
 // --- Dependency Versions ---
 
 extra["gradleWrapperVersion"] = "7.6.1"
-extra["cyfaceSerializationVersion"] = "3.4.2"
+extra["cyfaceSerializationVersion"] = "4.1.12-alpha3" // FIXME: alpha for testing
+extra["logbackVersion"] = "1.5.13"
 
 // Versions of testing dependencies
 extra["junitVersion"] = "5.9.2"
@@ -96,6 +97,10 @@ dependencies {
 
     // Cyface Dependencies
     implementation("de.cyface:model:${project.extra["cyfaceSerializationVersion"]}") // OsmTag class, mm-output
+
+    // Logging
+    implementation("ch.qos.logback:logback-classic:${project.extra["logbackVersion"]}")
+    implementation("ch.qos.logback:logback-core:${project.extra["logbackVersion"]}")
 
     // Testing Dependencies
     testImplementation(platform("org.junit:junit-bom:${project.extra["junitVersion"]}"))
