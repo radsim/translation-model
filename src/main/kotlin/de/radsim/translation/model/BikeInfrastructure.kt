@@ -146,10 +146,7 @@ enum class BikeInfrastructure(
         /**
          * All OSM tags that are used to determine the RadSim infrastructure type.
          *
-         * This list is used by `backend.RadSimTagMerger.merge` which already implements the first step of the
-         * simplified back-mapping: all tags which interfere with the [BikeInfrastructure] mapping are removed.
-         *
-         * This list is also used by `backend.AreaRoadNetworkProcessingVerticle` to ensure these tags are processed.
+         * This list is used by `backend.NetworkExtractor` to ensure these tags are exported.
          */
         @Suppress("unused") // Part of the API
         val specificOsmTags = OsmTag.entries.map { it.key }

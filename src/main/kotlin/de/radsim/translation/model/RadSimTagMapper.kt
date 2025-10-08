@@ -181,13 +181,13 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
             error("Back-mapping stalled: $from → $to produced no category change")
         }
 
-        // Remove tag removal signals (empty value String)
+        // Instead of filtering out empty-value tags before returning, return the raw delta including removals.
+        // This allows us to signal to the outside world, that tags have to be removed from the way.
+        // We cannot do this here, as we only see the changed tags, not all original OSM tags.
         return if (next == to) {
-            delta.filterNot { it.value is String && (it.value as String).isEmpty() }.toSet()
+            delta
         } else {
-            (delta + recursiveBackMap(next, to, updatedTags, visited))
-                .filterNot { it.value is String && (it.value as String).isEmpty() }
-                .toSet()
+            (delta + recursiveBackMap(next, to, updatedTags, visited)).toSet()
         }
     }
 

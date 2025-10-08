@@ -53,7 +53,8 @@ class SimplifiedBikeInfrastructureTest {
                 OsmTag("bicycle", "yes"), // from lane removal step (R7)
                 OsmTag("segregated", "no"),
                 OsmTag("bicycle", "designated"), // from R22 (NO→MIXED_WAY)
-                OsmTag("foot", "designated")
+                OsmTag("foot", "designated"),
+                OsmTag("cycleway", ""), // communiates tag deletion
             ),
             result
         )
@@ -63,7 +64,7 @@ class SimplifiedBikeInfrastructureTest {
     fun `MixedWay to NO should return R7 tags`() {
         val result = applyBackMap(SimplifiedBikeInfrastructure.MIXED_WAY, SimplifiedBikeInfrastructure.NO)
         assertEquals(
-            setOf(OsmTag("highway", "path")),
+            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")), // also communicate bicycle tag deletion
             result
         )
     }
