@@ -157,6 +157,11 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
         visited: MutableSet<Pair<SimplifiedBikeInfrastructure, Map<String, Any>>> = mutableSetOf()
     ): Set<OsmTag> {
         if (from == to) return emptySet()
+        if (from == SimplifiedBikeInfrastructure.NO) {
+            require(currentTags["highway"] != "cycleway") {
+                "Unexpected 'highway=cycleway' in back-mapping from NO category" // [BIK-1440]
+            }
+        }
 
         val state = from to currentTags
         if (!visited.add(state)) {
