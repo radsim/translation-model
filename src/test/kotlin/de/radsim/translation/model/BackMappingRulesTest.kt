@@ -95,7 +95,7 @@ class BackMappingRulesTest {
 
     @Test
     fun `R13 - bus_lane to mixed way`() {
-        val expected = tags("highway" to "path", "bicycle" to "yes", "segregated" to "no")
+        val expected = tags("highway" to "path", "bicycle" to "yes", "segregated" to "no", "cycleway" to "")
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.BUS_LANE,
             SimplifiedBikeInfrastructure.MIXED_WAY,

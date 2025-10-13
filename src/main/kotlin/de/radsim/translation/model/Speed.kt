@@ -57,6 +57,11 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
          */
         const val RADSIM_TAG = "maxSpeed"
 
+        @Suppress("unused") // Part of the API
+        fun fromValue(value: String): Speed =
+            entries.firstOrNull { it.value == value }
+                ?: error("Unexpected RadSim speed tag: $value")
+
         /**
          * The specific OSM tags that are used to determine the RadSim speed.
          *

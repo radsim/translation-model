@@ -26,7 +26,7 @@ class SimplifiedBikeInfrastructureTest {
 
     @Test
     fun `NO to BicycleRoad should produce base tags`() {
-        val result = applyBackMap(SimplifiedBikeInfrastructure.NO, SimplifiedBikeInfrastructure.BICYCLE_ROAD)
+        val result = applyBackMap(SimplifiedBikeInfrastructure.BICYCLE_ROAD)
         assertEquals(
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes")),
             result
@@ -35,15 +35,14 @@ class SimplifiedBikeInfrastructureTest {
 
     @Test
     fun `NO to CycleHighway should set cycle_highway tag`() {
-        val result = applyBackMap(SimplifiedBikeInfrastructure.NO, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
+        val result = applyBackMap(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
         assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
     }
 
     @Test
     fun `BicycleLane to MixedWay should remove lane and set shared path tags`() {
         val current = mapOf("cycleway" to "lane")
-        val result = recursiveBackMap(
-            SimplifiedBikeInfrastructure.BICYCLE_LANE,
+        val result = delta(
             SimplifiedBikeInfrastructure.MIXED_WAY,
             current
         )
@@ -62,9 +61,22 @@ class SimplifiedBikeInfrastructureTest {
 
     @Test
     fun `MixedWay to NO should return R7 tags`() {
-        val result = applyBackMap(SimplifiedBikeInfrastructure.MIXED_WAY, SimplifiedBikeInfrastructure.NO)
+        val current = mapOf(
+            "highway" to "footway", // Or "path"
+            "bicycle" to "yes",
+            "segregated" to "no"
+        )
+
+        val result = delta(
+            SimplifiedBikeInfrastructure.NO,
+            current
+        )
+
         assertEquals(
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")), // also communicate bicycle tag deletion
+            setOf(
+                OsmTag("highway", "path"),
+                OsmTag("bicycle", "")
+            ),
             result
         )
     }
@@ -72,8 +84,7 @@ class SimplifiedBikeInfrastructureTest {
     @Test
     fun `BicycleWay to BicycleLane should apply highway+cycleway lane`() {
         val current = mapOf("highway" to "cycleway")
-        val result = recursiveBackMap(
-            SimplifiedBikeInfrastructure.BICYCLE_WAY,
+        val result = delta(
             SimplifiedBikeInfrastructure.BICYCLE_LANE,
             current
         )
@@ -85,14 +96,13 @@ class SimplifiedBikeInfrastructureTest {
 
     @Test
     fun `BusLane to CycleHighway should only add cycle_highway tag`() {
-        val result = applyBackMap(SimplifiedBikeInfrastructure.BUS_LANE, SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
+        val result = applyBackMap(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
         assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
     }
 
     @Test
     fun `NO to NO should be idempotent`() {
-        val result = recursiveBackMap(
-            SimplifiedBikeInfrastructure.NO,
+        val result = delta(
             SimplifiedBikeInfrastructure.NO,
             emptyMap()
         )
@@ -103,18 +113,17 @@ class SimplifiedBikeInfrastructureTest {
      * Convenience wrapper around recursiveBackMap using empty starting tag set.
      */
     private fun applyBackMap(
-        from: SimplifiedBikeInfrastructure,
         to: SimplifiedBikeInfrastructure
-    ): Set<OsmTag> = recursiveBackMap(from, to, emptyMap())
+    ): Set<OsmTag> = delta(to)
 
-    /**
-     * Local copy of recursiveBackMap identical to RadSimTagMapper, so we can test it standalone.
-     */
-    private fun recursiveBackMap(
-        from: SimplifiedBikeInfrastructure,
+    private fun delta(
         to: SimplifiedBikeInfrastructure,
-        currentTags: Map<String, Any>
+        currentTags: Map<String, Any> = emptyMap()
     ): Set<OsmTag> {
-        return RadSimTagMapper(emptyList()).recursiveBackMap(from, to, currentTags)
+        return RadSimDeltaEngine.computeDelta(
+            currentTags = currentTags,
+            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+            value = to.value
+        )
     }
 }

@@ -34,7 +34,10 @@ object BackMappingRules {
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
         RuleKey(NO, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes"))
+            // Added, even though this is not a way tags (cycle_highway)
+            setOf(
+                OsmTag("cycle_highway", "yes"),
+            )
         },
         // R19
         RuleKey(NO, BICYCLE_WAY) to { _ ->
@@ -101,7 +104,7 @@ object BackMappingRules {
             )
         },
         RuleKey(BICYCLE_ROAD, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes"))
+            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
         },
 
         // -------------------------------------------------------------------
@@ -129,7 +132,7 @@ object BackMappingRules {
             setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
         },
         RuleKey(BICYCLE_WAY, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes"))
+            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
         },
 
         // -------------------------------------------------------------------
@@ -158,7 +161,7 @@ object BackMappingRules {
             setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
         },
         RuleKey(BICYCLE_LANE, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes"))
+            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
         },
 
         // -------------------------------------------------------------------
@@ -178,13 +181,18 @@ object BackMappingRules {
         },
         // R13
         RuleKey(BUS_LANE, MIXED_WAY) to { _ ->
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "yes"), OsmTag("segregated", "no")) // R13
+            setOf(
+                OsmTag("highway", "path"),
+                OsmTag("bicycle", "yes"),
+                OsmTag("segregated", "no"),
+                OsmTag("cycleway", ""), // Added: remove bus-lane marker!
+            ) // R13
         },
         RuleKey(BUS_LANE, NO) to { _ ->
             setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
         },
         RuleKey(BUS_LANE, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes"))
+            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
         },
 
         // -------------------------------------------------------------------
@@ -213,7 +221,7 @@ object BackMappingRules {
             setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
         },
         RuleKey(MIXED_WAY, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("bicycle", "designated"), OsmTag("foot", "designated"), OsmTag("segregated", "no"))
+            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
         },
 
         // -------------------------------------------------------------------
@@ -221,36 +229,55 @@ object BackMappingRules {
         // -------------------------------------------------------------------
         RuleKey(CYCLE_HIGHWAY, BICYCLE_ROAD) to { tags ->
             val highway = tags["highway"] ?: "residential"
-            setOf(OsmTag("highway", highway), OsmTag("bicycle_road", "yes"))
+            setOf(
+                OsmTag("highway", highway),
+                OsmTag("bicycle_road", "yes"),
+                OsmTag("cycle_highway", ""), // Added, even though this is not a way tags
+            )
         },
 
         RuleKey(CYCLE_HIGHWAY, BICYCLE_WAY) to { _ ->
             // R3
-            setOf(OsmTag("highway", "cycleway"), OsmTag("segregated", "yes"))
+            setOf(
+                OsmTag("highway", "cycleway"),
+                OsmTag("segregated", "yes"),
+                OsmTag("cycle_highway", ""), // Added, even though this is not a way tags
+            )
         },
 
         RuleKey(CYCLE_HIGHWAY, BICYCLE_LANE) to { tags ->
             // R4
             val highway = tags["highway"] ?: "secondary"
             val cleaned = if (highway == "cycleway") setOf(OsmTag("highway", "secondary")) else emptySet()
-            cleaned + OsmTag("cycleway", "lane")
+            // Added, even though this is not a way tags (cycle_highway)
+            cleaned + OsmTag("cycleway", "lane") + OsmTag("cycle_highway", "")
         },
 
         RuleKey(CYCLE_HIGHWAY, BUS_LANE) to { tags ->
             // R5
             val highway = tags["highway"] ?: "secondary"
             val cleaned = if (highway == "cycleway") setOf(OsmTag("highway", "secondary")) else emptySet()
-            cleaned + OsmTag("cycleway", "share_busway")
+            // Added, even though this is not a way tags (cycle_highway)
+            cleaned + OsmTag("cycleway", "share_busway") + OsmTag("cycle_highway", "")
         },
 
         RuleKey(CYCLE_HIGHWAY, MIXED_WAY) to { _ ->
             // R6
-            setOf(OsmTag("highway", "cycleway"), OsmTag("foot", "yes"), OsmTag("segregated", "no"))
+            setOf(
+                OsmTag("highway", "cycleway"),
+                OsmTag("foot", "yes"),
+                OsmTag("segregated", "no"),
+                OsmTag("cycle_highway", ""), // Added, even though this is not a way tags
+            )
         },
 
         RuleKey(CYCLE_HIGHWAY, NO) to { _ ->
             // R7
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", ""))
+            setOf(
+                OsmTag("highway", "path"),
+                OsmTag("bicycle", ""),
+                OsmTag("cycle_highway", ""), // Added, even though this is not a way tags
+            )
         },
     )
 
