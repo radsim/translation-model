@@ -108,13 +108,13 @@ class SimplifiedBikeInfrastructureTest {
     ): Set<OsmTag> = recursiveBackMap(from, to, emptyMap())
 
     /**
-     * Local copy of recursiveBackMap identical to RadSimTagMapper, so we can test it standalone.
+     * Local copy of recursiveBackMap identical to InfrastructureBackMapper, so we can test it standalone.
      */
     private fun recursiveBackMap(
         from: SimplifiedBikeInfrastructure,
         to: SimplifiedBikeInfrastructure,
         currentTags: Map<String, Any>
     ): Set<OsmTag> {
-        return RadSimTagMapper(emptyList()).recursiveBackMap(from, to, currentTags, false)
+        return InfrastructureBackMapper(emptyList()).recursiveBackMap(from, to, currentTags, false)
     }
 }
