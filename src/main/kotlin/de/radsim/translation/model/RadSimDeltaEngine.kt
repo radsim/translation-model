@@ -13,7 +13,6 @@ object RadSimDeltaEngine {
         key: String,
         value: String
     ): Set<OsmTag> = when (key) {
-
         // Infrastructure (roadStyle) — now handled here (was InfrastructureBackMapper)
         SimplifiedBikeInfrastructure.RADSIM_TAG -> {
             val from = BikeInfrastructure.toRadSim(currentTags).simplified

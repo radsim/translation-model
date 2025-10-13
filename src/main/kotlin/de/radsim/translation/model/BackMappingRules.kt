@@ -34,7 +34,10 @@ object BackMappingRules {
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
         RuleKey(NO, CYCLE_HIGHWAY) to { _ ->
-            setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
+            // Added, even though this is not a way tags (cycle_highway)
+            setOf(
+                OsmTag("cycle_highway", "yes"),
+            )
         },
         // R19
         RuleKey(NO, BICYCLE_WAY) to { _ ->
@@ -178,7 +181,12 @@ object BackMappingRules {
         },
         // R13
         RuleKey(BUS_LANE, MIXED_WAY) to { _ ->
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "yes"), OsmTag("segregated", "no")) // R13
+            setOf(
+                OsmTag("highway", "path"),
+                OsmTag("bicycle", "yes"),
+                OsmTag("segregated", "no"),
+                OsmTag("cycleway", ""), // Added: remove bus-lane marker!
+            ) // R13
         },
         RuleKey(BUS_LANE, NO) to { _ ->
             setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7

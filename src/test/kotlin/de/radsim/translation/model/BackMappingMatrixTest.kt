@@ -32,10 +32,45 @@ class BackMappingMatrixTest {
             values.filter { it != from }.map { to ->
                 DynamicTest.dynamicTest("$from → $to") {
                     assertDoesNotThrow {
-                        InfrastructureBackMapper(emptyList()).recursiveBackMap(from, to, emptyMap(), false)
+                        // Important: realistic context, emptyMap can disrupt detection of `from`
+                        val context = minimalContextFor(from)
+
+                        RadSimDeltaEngine.computeDelta(
+                            currentTags = context,
+                            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                            value = to.value
+                        )
                     }
                 }
             }
         }
     }
+
+    /**
+     * Provide minimal tags so `from` is actually recognized as current infra.
+     * Without this, emptyMap() always resolves to NO, causing invalid paths.
+     */
+    private fun minimalContextFor(from: SimplifiedBikeInfrastructure): Map<String, Any> =
+        when (from) {
+            SimplifiedBikeInfrastructure.BICYCLE_ROAD ->
+                mapOf("bicycle_road" to "yes")
+
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY ->
+                mapOf("cycle_highway" to "yes")
+
+            SimplifiedBikeInfrastructure.BICYCLE_WAY ->
+                mapOf("highway" to "cycleway") // generic bike_way signature
+
+            SimplifiedBikeInfrastructure.BICYCLE_LANE ->
+                mapOf("cycleway" to "lane")
+
+            SimplifiedBikeInfrastructure.BUS_LANE ->
+                mapOf("cycleway" to "share_busway")
+
+            SimplifiedBikeInfrastructure.MIXED_WAY ->
+                mapOf("highway" to "footway", "bicycle" to "yes", "segregated" to "no")
+
+            SimplifiedBikeInfrastructure.NO ->
+                emptyMap() // NO has no signature
+        }
 }
