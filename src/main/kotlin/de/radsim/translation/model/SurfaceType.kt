@@ -61,6 +61,11 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
          */
         const val RADSIM_TAG = "surface"
 
+        @Suppress("unused") // Part of the API
+        fun fromValue(value: String): SurfaceType =
+            entries.firstOrNull { it.value == value }
+                ?: error("Unexpected RadSim surface tag: $value")
+
         /**
          * The specific OSM tags that are used to determine the RadSim surface type.
          *

@@ -91,5 +91,10 @@ enum class SimplifiedBikeInfrastructure(val value: String) {
          * The RadSim tag used to store the simplified infrastructure type (6 categories + "no").
          */
         const val RADSIM_TAG = "roadStyleSimplified"
+
+        @Suppress("unused") // Part of the API
+        fun fromValue(value: String): SimplifiedBikeInfrastructure =
+            entries.firstOrNull { it.value == value }
+                ?: error("Unexpected RadSim tag: $value")
     }
 }

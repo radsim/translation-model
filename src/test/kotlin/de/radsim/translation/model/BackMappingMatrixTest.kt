@@ -32,7 +32,7 @@ class BackMappingMatrixTest {
             values.filter { it != from }.map { to ->
                 DynamicTest.dynamicTest("$from → $to") {
                     assertDoesNotThrow {
-                        RadSimTagMapper(emptyList()).recursiveBackMap(from, to, emptyMap())
+                        RadSimTagMapper(emptyList()).recursiveBackMap(from, to, emptyMap(), false)
                     }
                 }
             }

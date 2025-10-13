@@ -115,6 +115,6 @@ class SimplifiedBikeInfrastructureTest {
         to: SimplifiedBikeInfrastructure,
         currentTags: Map<String, Any>
     ): Set<OsmTag> {
-        return RadSimTagMapper(emptyList()).recursiveBackMap(from, to, currentTags)
+        return RadSimTagMapper(emptyList()).recursiveBackMap(from, to, currentTags, false)
     }
 }

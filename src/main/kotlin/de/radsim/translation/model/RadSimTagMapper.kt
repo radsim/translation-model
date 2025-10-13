@@ -54,78 +54,30 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
                     when (key) {
                         // For an overview see https://wiki.openstreetmap.org/wiki/Bicycle
                         SimplifiedBikeInfrastructure.RADSIM_TAG -> {
+                            error("Should not be called as we now call recursiveBackMap from outside")
                             // Attention:
                             // [backend.RadSimTagMerger.merge] already implements the first step of the back-mapping:
-                            // Remove any *:left/*:right/*:both/*:cycleway key tags.
+                            // Remove any * :left / *:right / *:both / *:cycleway key tags.
                             // For more details about the back-mapping see [SimplifiedBikeInfrastructure].
 
                             // Then apply the from-to category rules until the target category is reached.
                             // We only write simple (side-agnostic) tags (see new rules 2025-08-21).
-                            val targetInfra = when (value) {
-                                SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value ->
-                                    SimplifiedBikeInfrastructure.CYCLE_HIGHWAY
-                                SimplifiedBikeInfrastructure.BICYCLE_ROAD.value ->
-                                    SimplifiedBikeInfrastructure.BICYCLE_ROAD
-                                SimplifiedBikeInfrastructure.BICYCLE_WAY.value ->
-                                    SimplifiedBikeInfrastructure.BICYCLE_WAY
-                                SimplifiedBikeInfrastructure.BICYCLE_LANE.value ->
-                                    SimplifiedBikeInfrastructure.BICYCLE_LANE
-                                SimplifiedBikeInfrastructure.BUS_LANE.value ->
-                                    SimplifiedBikeInfrastructure.BUS_LANE
-                                SimplifiedBikeInfrastructure.MIXED_WAY.value ->
-                                    SimplifiedBikeInfrastructure.MIXED_WAY
-                                SimplifiedBikeInfrastructure.NO.value ->
-                                    SimplifiedBikeInfrastructure.NO
-                                else -> error("Unexpected RadSim tag: $radsSimTag")
-                            }
+                            val targetInfra = SimplifiedBikeInfrastructure.fromValue(value as String)
 
                             val originalTagMap = osmTags.associate { it.key to it.value } // or original tags if known
                             val fromInfra = BikeInfrastructure.toRadSim(originalTagMap).simplified
 
-                            osmTags.addAll(recursiveBackMap(fromInfra, targetInfra, originalTagMap))
+                            osmTags.addAll(recursiveBackMap(fromInfra, targetInfra, originalTagMap, false))
                         }
 
-                        // To check the penalty during routing, see:
-                        // https://github.com/abrensch/brouter/blob/372a04a6cf4608cf14bc7045aed9499012a23f52/misc/profiles2/fastbike-verylowtraffic.brf#L136
-                        SurfaceType.RADSIM_TAG ->
-                            when (value) {
-                                SurfaceType.COMFORT_1_ASPHALT.value -> {
-                                    osmTags.add(SurfaceType.COMFORT_1_ASPHALT.backMappingTag)
-                                }
+                        SurfaceType.RADSIM_TAG -> {
+                            val targetSurface = SurfaceType.fromValue(value as String)
+                            osmTags.add(targetSurface.backMappingTag)
+                        }
 
-                                SurfaceType.COMFORT_2_COMPACTED.value -> {
-                                    osmTags.add(SurfaceType.COMFORT_2_COMPACTED.backMappingTag)
-                                }
-
-                                SurfaceType.COMFORT_3_COBBLESTONE.value -> {
-                                    osmTags.add(SurfaceType.COMFORT_3_COBBLESTONE.backMappingTag)
-                                }
-
-                                SurfaceType.COMFORT_4_GRAVEL.value -> {
-                                    osmTags.add(SurfaceType.COMFORT_4_GRAVEL.backMappingTag)
-                                }
-
-                                else -> throw IllegalArgumentException("Unknown RadSim tag: $radsSimTag")
-                            }
-
-                        Speed.RADSIM_TAG -> when (value) {
-                            Speed.MAX_SPEED_MIV_LTE_30.value -> {
-                                osmTags.add(Speed.MAX_SPEED_MIV_LTE_30.backMappingTag!!)
-                            }
-
-                            Speed.MAX_SPEED_MIV_GT_30_LTE_50.value -> {
-                                osmTags.add(Speed.MAX_SPEED_MIV_GT_30_LTE_50.backMappingTag!!)
-                            }
-
-                            Speed.MAX_SPEED_MIV_GT_50.value -> {
-                                osmTags.add(Speed.MAX_SPEED_MIV_GT_50.backMappingTag!!)
-                            }
-
-                            else -> {
-                                require(Speed.NO_INFORMATION.value == value) {
-                                    "Unknown RadSim tag: $radsSimTag"
-                                }
-                            }
+                        Speed.RADSIM_TAG -> {
+                            val targetSpeed = Speed.fromValue(value as String)
+                            targetSpeed.backMappingTag?.let { osmTags.add(it) }
                         }
 
                         else -> throw IllegalArgumentException("Unknown RadSim tag key: $key")
@@ -154,6 +106,7 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
         from: SimplifiedBikeInfrastructure,
         to: SimplifiedBikeInfrastructure,
         currentTags: Map<String, Any>,
+        fromOutside: Boolean, // Just for debugging right now
         visited: MutableSet<Pair<SimplifiedBikeInfrastructure, Map<String, Any>>> = mutableSetOf()
     ): Set<OsmTag> {
         if (from == to) return emptySet()
@@ -192,7 +145,11 @@ class RadSimTagMapper(private val tags: List<OsmTag>) {
         return if (next == to) {
             delta
         } else {
-            (delta + recursiveBackMap(next, to, updatedTags, visited)).toSet()
+            if (fromOutside) {
+                // Just added so we know if this is actually ever called
+                LOGGER.warn("Recursion during outside-call, visited: ${visited.size}")
+            }
+            (delta + recursiveBackMap(next, to, updatedTags, fromOutside, visited)).toSet()
         }
     }
 
