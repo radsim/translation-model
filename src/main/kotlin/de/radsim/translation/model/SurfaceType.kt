@@ -206,6 +206,9 @@ enum class SurfaceType(val value: String, val backMappingTag: OsmTag) {
          */
         @SuppressWarnings("ReturnCount") // TODO
         fun toRadSim(tags: Map<String, Any>): SurfaceType {
+            // Validate that we're receiving OSM tags, not RadSim tags [BIK-1478]
+            TagFormatValidator.requireOsmFormat(tags, "SurfaceType.toRadSim()")
+
             // Iterate through mapping list first to ensure hierarchical checks
             for (mapping in MAPPINGS) {
                 val osmKey = mapping.tagKey

@@ -259,6 +259,9 @@ enum class BikeInfrastructure(
         // https://github.com/1prk/osm_categorizer/blob/radsim/netapy/assessor_free.py
         @Suppress("CyclomaticComplexMethod", "LongMethod", "ComplexMethod", "ReturnCount", "ComplexCondition")
         fun toRadSim(tags: Map<String, Any>): BikeInfrastructure {
+            // Validate that we're receiving OSM tags, not RadSim tags [BIK-1478]
+            TagFormatValidator.requireOsmFormat(tags, "BikeInfrastructure.toRadSim()")
+
             if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
                 (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
             ) {
