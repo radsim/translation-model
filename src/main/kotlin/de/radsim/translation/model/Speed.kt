@@ -139,6 +139,9 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
          */
         @Suppress("SpellCheckingInspection", "ReturnCount") // TODO
         fun toRadSim(tags: Map<String, Any>): Speed {
+            // Validate that we're receiving OSM tags, not RadSim tags [BIK-1478]
+            TagFormatValidator.requireOsmFormat(tags, "Speed.toRadSim()")
+
             // Add mappings in order: check first tag for all values, then check next tag for all values, etc.
             for (osmKey in specificOsmTags) {
                 val tagValue = tags[osmKey]?.toString() ?: continue
