@@ -136,21 +136,27 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
          * - "signals" -> 50 km/h
          * - "none" -> null
          *
+         * Optimized to check numeric values first since they are most common [BIK-1483 performance]
+         *
          * @param value The speed value string from OSM tags
          * @return The numeric speed in km/h, or null if unable to parse
          */
         @Suppress("MagicNumber", "CyclomaticComplexMethod")
         private fun parseSpeedValue(value: String): Int? {
+            // Fast path: Try numeric parsing first (most common case ~95% of data)
+            value.toIntOrNull()?.let { return it }
+
+            // Special cases (only checked if not a simple number)
             return when {
                 value == "none" -> null
                 value == "DE:rural" || value == "de:rural" -> 100
                 value == "DE:urban" -> 50
                 value == "DE:motorway" -> 200
-                value.startsWith("DE:") && value.substring(3).toIntOrNull() != null -> value.substring(3).toInt()
+                value.startsWith("DE:") && value.length > 3 -> value.substring(3).toIntOrNull()
                 value == "walk" || value == "Schrittgeschwindigkeit" -> 5
                 value == "10;30" -> 30 // Multiple values, take maximum
                 value == "signals" -> 50
-                else -> value.toIntOrNull()
+                else -> null
             }
         }
 
@@ -181,6 +187,8 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
          * 4. If no speed tags found, infer from highway tag
          * 5. Default to 10_OR_LESS for anything else
          *
+         * Optimized to minimize parseSpeedValue() calls [BIK-1483 performance]
+         *
          * @param tags The OSM tags to search for the speed.
          * @return The speed based on the provided OSM tags.
          */
@@ -189,58 +197,51 @@ enum class Speed(val value: String, val backMappingTag: OsmTag?) {
             // Validate that we're receiving OSM tags, not RadSim tags [BIK-1478]
             TagFormatValidator.requireOsmFormat(tags, "Speed.toRadSim()")
 
-            var speedToClassify: Int? = null
-
-            // Step 1: Check maxspeed tag first
-            val maxspeedValue = tags["maxspeed"]?.toString()
-            if (maxspeedValue != null && maxspeedValue != "none") {
-                speedToClassify = parseSpeedValue(maxspeedValue)
+            // Step 1: Check maxspeed tag first (most common case - short circuit if found)
+            tags["maxspeed"]?.toString()?.let { maxspeedValue ->
+                if (maxspeedValue != "none") {
+                    parseSpeedValue(maxspeedValue)?.let { return classifySpeed(it) }
+                }
             }
 
             // Step 2: If no maxspeed, check maxspeed:forward and maxspeed:backward (take maximum)
-            if (speedToClassify == null) {
-                val forwardValue = tags["maxspeed:forward"]?.toString()?.let { parseSpeedValue(it) }
-                val backwardValue = tags["maxspeed:backward"]?.toString()?.let { parseSpeedValue(it) }
+            // Only parse if at least one exists to avoid null checks
+            val forwardValue = tags["maxspeed:forward"]?.toString()?.let { parseSpeedValue(it) }
+            val backwardValue = tags["maxspeed:backward"]?.toString()?.let { parseSpeedValue(it) }
 
-                if (forwardValue != null || backwardValue != null) {
-                    speedToClassify = maxOf(forwardValue ?: 0, backwardValue ?: 0)
+            if (forwardValue != null || backwardValue != null) {
+                val maxSpeed = maxOf(forwardValue ?: 0, backwardValue ?: 0)
+                return classifySpeed(maxSpeed)
+            }
+
+            // Step 3: If still no speed, check zone:maxspeed (inline fast path)
+            tags["zone:maxspeed"]?.toString()?.let { zoneValue ->
+                @Suppress("MagicNumber")
+                val speed = when (zoneValue) {
+                    "30" -> 30
+                    "20" -> 20
+                    "DE:urban" -> 50
+                    "DE:20" -> 20
+                    "DE:motorway" -> 200
+                    else -> null
+                }
+                if (speed != null) {
+                    return classifySpeed(speed)
                 }
             }
 
-            // Step 3: If still no speed, check zone:maxspeed
-            if (speedToClassify == null) {
-                val zoneValue = tags["zone:maxspeed"]?.toString()
-                if (zoneValue != null) {
-                    @Suppress("MagicNumber")
-                    speedToClassify = when (zoneValue) {
-                        "30" -> 30
-                        "20" -> 20
-                        "DE:urban" -> 50
-                        "DE:20" -> 20
-                        "DE:motorway" -> 200
-                        else -> null
-                    }
-                }
-            }
-
-            // Step 4: If we have a speed value, classify it
-            if (speedToClassify != null) {
-                return classifySpeed(speedToClassify)
-            }
-
-            // Step 5: Fallback to highway-based inference
-            val highwayValue = tags[ALTERNATIVE_OSM_TAG]?.toString()
-            if (highwayValue != null) {
+            // Step 4: Fallback to highway-based inference (pre-computed Sets for fast lookup)
+            tags[ALTERNATIVE_OSM_TAG]?.toString()?.let { highwayValue ->
                 return when (highwayValue) {
                     in HIGHWAY_FALLBACK_70_OR_MORE -> MAX_SPEED_70_OR_MORE
                     in HIGHWAY_FALLBACK_10_OR_LESS -> MAX_SPEED_10_OR_LESS
                     in HIGHWAY_FALLBACK_30_TO_50 -> MAX_SPEED_30_TO_50
                     in HIGHWAY_FALLBACK_10_TO_30 -> MAX_SPEED_10_TO_30
-                    else -> MAX_SPEED_10_OR_LESS // Default fallback
+                    else -> MAX_SPEED_10_OR_LESS
                 }
             }
 
-            // Step 6: Ultimate fallback
+            // Step 5: Ultimate fallback
             return MAX_SPEED_10_OR_LESS
         }
     }
