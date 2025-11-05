@@ -33,12 +33,16 @@ class ToRadSimMapper(private val tags: List<OsmTag>) {
         originalTags[BikeInfrastructure.RADSIM_TAG] = radSimTagValue
 
         when (Speed.toRadSim(original)) {
-            Speed.MAX_SPEED_MIV_LTE_30 ->
-                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_MIV_LTE_30.value
-            Speed.MAX_SPEED_MIV_GT_30_LTE_50 ->
-                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_MIV_GT_30_LTE_50.value
-            Speed.MAX_SPEED_MIV_GT_50 ->
-                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_MIV_GT_50.value
+            Speed.MAX_SPEED_10_OR_LESS ->
+                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_10_OR_LESS.value
+            Speed.MAX_SPEED_10_TO_30 ->
+                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_10_TO_30.value
+            Speed.MAX_SPEED_30_TO_50 ->
+                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_30_TO_50.value
+            Speed.MAX_SPEED_50_TO_70 ->
+                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_50_TO_70.value
+            Speed.MAX_SPEED_70_OR_MORE ->
+                originalTags[Speed.RADSIM_TAG] = Speed.MAX_SPEED_70_OR_MORE.value
             else ->
                 originalTags[Speed.RADSIM_TAG] = Speed.NO_INFORMATION.value
         }

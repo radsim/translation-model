@@ -18,8 +18,6 @@
  */
 package de.radsim.translation.model
 
-import de.radsim.translation.model.Speed.Companion.specificOsmTags
-
 @Suppress("unused") // Part of the API
 object WayId {
     /**
@@ -28,7 +26,7 @@ object WayId {
     const val RADSIM_TAG = "@id"
 
     /**
-     * The [specificOsmTags] tag used to back-map the RadSim way id to OSM.
+     * The OSM tag used to back-map the RadSim way id to OSM.
      */
     @Suppress("MemberVisibilityCanBePrivate") // Part of the API
     const val BACK_MAPPING_OSM_TAG = "@id"
