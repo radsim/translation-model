@@ -33,11 +33,15 @@ object BackMappingRules {
         RuleKey(NO, BICYCLE_ROAD) to { _ ->
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
-        RuleKey(NO, CYCLE_HIGHWAY) to { _ ->
+        RuleKey(NO, CYCLE_HIGHWAY) to { tags ->
             // Added, even though this is not a way tags (cycle_highway)
-            setOf(
-                OsmTag("cycle_highway", "yes"),
-            )
+            val highway = tags["highway"] as? String
+            val maybeHighwayChange = if (highway == "service") {
+                setOf(OsmTag("highway", "cycleway"))
+            } else {
+                emptySet()
+            }
+            maybeHighwayChange + OsmTag("cycle_highway", "yes")
         },
         // R19
         RuleKey(NO, BICYCLE_WAY) to { _ ->

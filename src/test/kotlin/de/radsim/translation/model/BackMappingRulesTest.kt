@@ -171,4 +171,29 @@ class BackMappingRulesTest {
         )
         assertEquals(expected, actual)
     }
+
+    @Test
+    fun `NO to CYCLE_HIGHWAY - with service road`() {
+        val expected = tags(
+            "highway" to "cycleway",
+            "cycle_highway" to "yes"
+        )
+        val actual = BackMappingRules.applyRule(
+            SimplifiedBikeInfrastructure.NO,
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
+            mapOf("highway" to "service", "service" to "parking_aisle", "access" to "private")
+        )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `NO to CYCLE_HIGHWAY - without service road`() {
+        val expected = tags("cycle_highway" to "yes")
+        val actual = BackMappingRules.applyRule(
+            SimplifiedBikeInfrastructure.NO,
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
+            mapOf("highway" to "residential")
+        )
+        assertEquals(expected, actual)
+    }
 }
