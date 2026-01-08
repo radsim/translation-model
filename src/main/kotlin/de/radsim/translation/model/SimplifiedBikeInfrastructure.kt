@@ -74,7 +74,7 @@ enum class SimplifiedBikeInfrastructure(val value: String) {
     BUS_LANE("BusLane"),
 
     /**
-     * Infrastructure type where bicycles share a lane with pedestrians or other traffic.
+     * Infrastructure where bikes and pedestrians use the same lane.
      */
     MIXED_WAY("MixedWay"),
 
