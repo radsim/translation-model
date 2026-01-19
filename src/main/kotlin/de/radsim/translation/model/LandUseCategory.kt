@@ -126,10 +126,10 @@ enum class LandUseCategory(
         fun waterBufferMeters(areaSquareMeters: Double, isRiver: Boolean): Double {
             if (isRiver) return 100.0
             return when {
-                areaSquareMeters < 100 -> 5.0      // Very small ponds
-                areaSquareMeters < 1000 -> 20.0   // Small lakes
-                areaSquareMeters < 10000 -> 50.0  // Medium lakes
-                else -> 100.0                      // Large lakes
+                areaSquareMeters < 100 -> 5.0 // Very small ponds
+                areaSquareMeters < 1000 -> 20.0 // Small lakes
+                areaSquareMeters < 10000 -> 50.0 // Medium lakes
+                else -> 100.0 // Large lakes
             }
         }
 
@@ -171,6 +171,7 @@ enum class LandUseCategory(
          * @param isRiver Whether this is a river (only applicable for WATER category)
          * @return Buffer distance in meters
          */
+        @Suppress("unused") // Part of the API
         fun bufferMeters(category: LandUseCategory, areaSquareMeters: Double, isRiver: Boolean = false): Double {
             return when (category) {
                 WATER -> waterBufferMeters(areaSquareMeters, isRiver)

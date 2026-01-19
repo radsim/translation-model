@@ -59,7 +59,7 @@ object LandUse {
     /**
      * All land use RadSim tags.
      */
-    val ALL_TAGS = listOf(RADSIM_TAG_WATER, RADSIM_TAG_GREEN, RADSIM_TAG_NATURAL)
+    // val ALL_TAGS = listOf(RADSIM_TAG_WATER, RADSIM_TAG_GREEN, RADSIM_TAG_NATURAL)
 
     /**
      * Threshold percentage for binary classification.
@@ -75,14 +75,8 @@ object LandUse {
      * @param percentageOverlap The percentage of way length within buffered polygon (0-100)
      * @return 1 if >= THRESHOLD_PERCENTAGE (50%), 0 otherwise
      */
+    @Suppress("unused") // Part of the API
     fun toBinary(percentageOverlap: Double): Int {
         return if (percentageOverlap >= THRESHOLD_PERCENTAGE) 1 else 0
     }
-
-    /**
-     * Gets the default value for a land use attribute when no polygon data is available.
-     *
-     * @return 0 (not near any land use type)
-     */
-    fun defaultValue(): Int = 0
 }
