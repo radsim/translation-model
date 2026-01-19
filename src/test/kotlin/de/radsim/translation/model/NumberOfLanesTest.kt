@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Cyface GmbH
+ * Copyright (C) 2026 Cyface GmbH
  *
  * This file is part of the RadSim Translation Model.
  *
