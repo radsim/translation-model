@@ -46,6 +46,9 @@ class ToRadSimMapper(private val tags: List<OsmTag>) {
             else ->
                 originalTags[Speed.RADSIM_TAG] = Speed.NO_INFORMATION.value
         }
+
+        originalTags[NumberOfLanes.RADSIM_TAG] = NumberOfLanes.toRadSim(original).toString()
+
         return originalTags
     }
 }
