@@ -49,12 +49,12 @@ class NumberOfLanesTest {
         }
     }
 
-    @Suppress("SpellCheckingInspection")
     companion object {
         /**
          * @return All test setup to run
          */
         @JvmStatic
+        @SuppressWarnings("LongMethod")
         fun testParameters(): Stream<NumberOfLanesParameters> {
             return Stream.of(
                 // Direct lanes tag

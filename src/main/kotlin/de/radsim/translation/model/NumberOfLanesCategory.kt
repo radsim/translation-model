@@ -21,38 +21,25 @@ package de.radsim.translation.model
 /**
  * An enumeration providing the different number of lanes categories considered by RadSim.
  *
- * TODO: These categories are preliminary guesses. Update when TUD provides the final
- *       coefficients and category definitions for numberOfLanes.
- *
  * The categories are:
- * - 0 lanes: footways, cycleways, paths without motor vehicle lanes
- * - 1 lane: single lane roads (residential, service, etc.)
- * - 2 lanes: standard two-lane roads (TODO: reference category for selection model until we hear something from TUD)
- * - 3+ lanes: multi-lane roads
+ * - 1- lanes: single lane roads or oaths ways without motor vehicle lanes
+ * - 2+ lanes: multi-lane roads
  *
  * @property value The value for the RadSim number of lanes category tag
  */
 enum class NumberOfLanesCategory(val value: String) {
     /**
-     * Roads with no motor vehicle lanes (footways, cycleways, pedestrian paths).
+     * Roads with no motor vehicle lanes (footways, cycleways, pedestrian paths) or single lane roads (residential,
+     * service roads, tracks).
      */
-    LANES_0("0"),
+    @Suppress("SpellCheckingInspection")
+    LANES_1_OR_LESS("1orless"),
 
     /**
-     * Single lane roads (residential, service roads, tracks).
+     * Multi-lane roads with 2 or more lanes.
      */
-    LANES_1("1"),
-
-    /**
-     * Standard two-lane roads (tertiary, secondary, primary).
-     * TODO: This is the reference category for the selection model until we hear something from TUD.
-     */
-    LANES_2("2"),
-
-    /**
-     * Multi-lane roads with 3 or more lanes.
-     */
-    LANES_3_OR_MORE("3ormore");
+    @Suppress("SpellCheckingInspection")
+    LANES_2_OR_MORE("2ormore");
 
     companion object {
         /**
@@ -61,12 +48,11 @@ enum class NumberOfLanesCategory(val value: String) {
          * @param numberOfLanes The number of lanes as returned by [NumberOfLanes.toRadSim]
          * @return The corresponding NumberOfLanesCategory
          */
+        @Suppress("unused") // Part of the API
         fun fromLaneCount(numberOfLanes: Int): NumberOfLanesCategory {
             return when {
-                numberOfLanes <= 0 -> LANES_0
-                numberOfLanes == 1 -> LANES_1
-                numberOfLanes == 2 -> LANES_2
-                else -> LANES_3_OR_MORE
+                numberOfLanes <= 1 -> LANES_1_OR_LESS
+                else -> LANES_2_OR_MORE
             }
         }
 
