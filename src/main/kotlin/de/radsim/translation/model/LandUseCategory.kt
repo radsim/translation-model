@@ -21,15 +21,16 @@ package de.radsim.translation.model
 /**
  * An enumeration providing the different land use categories considered by RadSim.
  *
- * Land use polygons are extracted from OSM data and buffered based on their category and area.
+ * Land use polygons and lines are extracted from OSM data and buffered based on their category and area.
  * Ways are then annotated with binary attributes indicating whether they are "near" (>= 50%
  * of length within buffer) each land use type.
  *
- * TODO: Land use categories are placeholders - update when TUD provides final categories
+ * These filters match the Python reference implementation (compute_landuse notebook).
  *
  * @property value The value identifier for this land use category
  * @property radsimTag The RadSim tag name used to store the binary attribute on ways
- * @property osmFilters The osmium tags-filter expressions to extract relevant polygons from PBF
+ * @property osmFilters The OSM tag combinations used to identify features of this category.
+ *           Note: Actual osmium filter expressions (with a/, w/ prefixes) are in NetworkExtractor.
  */
 enum class LandUseCategory(
     val value: String,
@@ -37,53 +38,112 @@ enum class LandUseCategory(
     val osmFilters: List<String>
 ) {
     /**
-     * Water features: rivers, lakes, basins.
+     * Water features: water bodies, wetlands, basins, rivers, streams.
+     *
+     * Areas: natural=water/wetland/bay/strait, landuse=reservoir/basin/aquaculture,
+     *        waterway=riverbank/canal/ditch/drain/stream
+     * Lines: waterway=river/stream/canal/riverbank
      *
      * Buffer: 5-100m based on area and type (rivers get 100m).
      */
     WATER(
         "water",
         LandUse.RADSIM_TAG_WATER,
-        // TODO: OSM filters are placeholders - update when TUD provides final tag list
         listOf(
-            "landuse=basin",
+            // Areas (natural)
             "natural=water",
-            "waterway=river",
+            "natural=wetland",
+            "natural=bay",
+            "natural=strait",
+            // Areas (landuse)
+            "landuse=reservoir",
+            "landuse=basin",
+            "landuse=aquaculture",
+            // Areas (waterway)
+            "waterway=riverbank",
+            "waterway=canal",
+            "waterway=ditch",
+            "waterway=drain",
             "waterway=stream",
-            "waterway=canal"
+            // Lines (waterway)
+            "waterway=river"
         )
     ),
 
     /**
-     * Green spaces: forests, parks, grass areas.
+     * Green spaces: forests, meadows, parks, gardens, natural vegetation.
+     *
+     * Areas: landuse=forest/meadow/grass/greenfield/village_green,
+     *        natural=wood/grassland/heath/scrub,
+     *        leisure=park/garden/golf_course/pitch/playground,
+     *        amenity=grave_yard, boundary=national_park/protected_area
+     * Lines: natural=hedge/tree_row
      *
      * Buffer: 5-20m based on area.
      */
     GREEN(
         "green",
         LandUse.RADSIM_TAG_GREEN,
-        // TODO: OSM filters are placeholders - update when TUD provides final tag list
         listOf(
+            // Areas (landuse)
             "landuse=forest",
+            "landuse=meadow",
             "landuse=grass",
+            "landuse=greenfield",
+            "landuse=village_green",
+            // Areas (natural)
+            "natural=wood",
+            "natural=grassland",
+            "natural=heath",
+            "natural=scrub",
+            // Areas (leisure)
             "leisure=park",
-            "natural=wood"
+            "leisure=garden",
+            "leisure=golf_course",
+            "leisure=pitch",
+            "leisure=playground",
+            // Areas (other)
+            "amenity=grave_yard",
+            "boundary=national_park",
+            "boundary=protected_area",
+            // Lines (natural)
+            "natural=hedge",
+            "natural=tree_row"
         )
     ),
 
     /**
-     * Natural/agricultural areas: farmland, meadows, orchards.
+     * Natural/agricultural areas: farmland, orchards, vineyards, greenhouses.
+     *
+     * Areas: landuse=farmland/farmyard/orchard/vineyard/plant_nursery/greenhouse_horticulture,
+     *        crop=* (any value), meadow=agricultural/pasture/hay,
+     *        natural=grassland, building=farm/greenhouse
+     * Lines: landuse=farmland/farmyard/orchard/vineyard/plant_nursery/greenhouse_horticulture
      *
      * Buffer: 5-30m based on area.
      */
     NATURAL(
         "natural",
         LandUse.RADSIM_TAG_NATURAL,
-        // TODO: OSM filters are placeholders - update when TUD provides final tag list
         listOf(
+            // Areas (landuse)
             "landuse=farmland",
-            "landuse=meadow",
-            "landuse=orchard"
+            "landuse=farmyard",
+            "landuse=orchard",
+            "landuse=vineyard",
+            "landuse=plant_nursery",
+            "landuse=greenhouse_horticulture",
+            // Areas (crop - any value)
+            "crop=*",
+            // Areas (meadow key with specific values)
+            "meadow=agricultural",
+            "meadow=pasture",
+            "meadow=hay",
+            // Areas (natural)
+            "natural=grassland",
+            // Areas (building)
+            "building=farm",
+            "building=greenhouse"
         )
     );
 
@@ -110,7 +170,7 @@ enum class LandUseCategory(
             entries.firstOrNull { it.radsimTag == tag }
                 ?: error("Unexpected RadSim land use tag: $tag")
 
-        // TODO: Buffer calculations are placeholders - update when TUD provides final values
+        // Buffer calculations match the Python reference implementation (compute_landuse notebook)
 
         /**
          * Calculates buffer size for water features based on area and type.
