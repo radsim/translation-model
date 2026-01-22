@@ -25,126 +25,43 @@ package de.radsim.translation.model
  * Ways are then annotated with binary attributes indicating whether they are "near" (>= 50%
  * of length within buffer) each land use type.
  *
- * These filters match the Python reference implementation (compute_landuse notebook).
+ * These filters match the Python reference implementation (compute_land-use notebook).
  *
  * @property value The value identifier for this land use category
  * @property radsimTag The RadSim tag name used to store the binary attribute on ways
- * @property osmFilters The OSM tag combinations used to identify features of this category.
- *           Note: Actual osmium filter expressions (with a/, w/ prefixes) are in NetworkExtractor.
  */
 enum class LandUseCategory(
     val value: String,
     val radsimTag: String,
-    val osmFilters: List<String>
 ) {
     /**
-     * Water features: water bodies, wetlands, basins, rivers, streams.
-     *
-     * Areas: natural=water/wetland/bay/strait, landuse=reservoir/basin/aquaculture,
-     *        waterway=riverbank/canal/ditch/drain/stream
-     * Lines: waterway=river/stream/canal/riverbank
+     * Water features like water bodies, wetlands, basins, rivers, streams.
      *
      * Buffer: 5-100m based on area and type (rivers get 100m).
      */
     WATER(
         "water",
         LandUse.RADSIM_TAG_WATER,
-        listOf(
-            // Areas (natural)
-            "natural=water",
-            "natural=wetland",
-            "natural=bay",
-            "natural=strait",
-            // Areas (landuse)
-            "landuse=reservoir",
-            "landuse=basin",
-            "landuse=aquaculture",
-            // Areas (waterway)
-            "waterway=riverbank",
-            "waterway=canal",
-            "waterway=ditch",
-            "waterway=drain",
-            "waterway=stream",
-            // Lines (waterway)
-            "waterway=river"
-        )
     ),
 
     /**
-     * Green spaces: forests, meadows, parks, gardens, natural vegetation.
-     *
-     * Areas: landuse=forest/meadow/grass/greenfield/village_green,
-     *        natural=wood/grassland/heath/scrub,
-     *        leisure=park/garden/golf_course/pitch/playground,
-     *        amenity=grave_yard, boundary=national_park/protected_area
-     * Lines: natural=hedge/tree_row
+     * Green spaces like forests, meadows, parks, gardens, natural vegetation.
      *
      * Buffer: 5-20m based on area.
      */
     GREEN(
         "green",
         LandUse.RADSIM_TAG_GREEN,
-        listOf(
-            // Areas (landuse)
-            "landuse=forest",
-            "landuse=meadow",
-            "landuse=grass",
-            "landuse=greenfield",
-            "landuse=village_green",
-            // Areas (natural)
-            "natural=wood",
-            "natural=grassland",
-            "natural=heath",
-            "natural=scrub",
-            // Areas (leisure)
-            "leisure=park",
-            "leisure=garden",
-            "leisure=golf_course",
-            "leisure=pitch",
-            "leisure=playground",
-            // Areas (other)
-            "amenity=grave_yard",
-            "boundary=national_park",
-            "boundary=protected_area",
-            // Lines (natural)
-            "natural=hedge",
-            "natural=tree_row"
-        )
     ),
 
     /**
-     * Natural/agricultural areas: farmland, orchards, vineyards, greenhouses.
-     *
-     * Areas: landuse=farmland/farmyard/orchard/vineyard/plant_nursery/greenhouse_horticulture,
-     *        crop=* (any value), meadow=agricultural/pasture/hay,
-     *        natural=grassland, building=farm/greenhouse
-     * Lines: landuse=farmland/farmyard/orchard/vineyard/plant_nursery/greenhouse_horticulture
+     * Natural/agricultural areas like farmland, orchards, vineyards, greenhouses.
      *
      * Buffer: 5-30m based on area.
      */
     NATURAL(
         "natural",
         LandUse.RADSIM_TAG_NATURAL,
-        listOf(
-            // Areas (landuse)
-            "landuse=farmland",
-            "landuse=farmyard",
-            "landuse=orchard",
-            "landuse=vineyard",
-            "landuse=plant_nursery",
-            "landuse=greenhouse_horticulture",
-            // Areas (crop - any value)
-            "crop=*",
-            // Areas (meadow key with specific values)
-            "meadow=agricultural",
-            "meadow=pasture",
-            "meadow=hay",
-            // Areas (natural)
-            "natural=grassland",
-            // Areas (building)
-            "building=farm",
-            "building=greenhouse"
-        )
     );
 
     companion object {

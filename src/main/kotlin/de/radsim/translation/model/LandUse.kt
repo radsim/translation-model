@@ -33,6 +33,11 @@ package de.radsim.translation.model
  *
  * Each way receives a binary value (0 or 1) for each category based on whether >= 50% of its
  * length falls within buffered polygons of that category.
+ *
+ * NOTE: This binary value is just an intermediate implementation. This treats a segment in the land-use case
+ * similar to other attributes, e.g. "either it is a cycle way or not". TUD will eventually change this to calculate
+ * the actual share of the edge which is "inside the land-use buffer area". But the coefficients will stay the same
+ * in the SelectionModel. Until we get a note from TUD, this binary decision stays as it is.
  */
 object LandUse {
     /**
