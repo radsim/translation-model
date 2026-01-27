@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Cyface GmbH
+# Copyright 2019-2026 Cyface GmbH
 #
 # This file is part of the RadSim Translation Model.
 #
@@ -27,8 +27,14 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*'
 
+# Fallback: explicit workflow permissions (as little as required)
+permissions:
+  contents: write    # to create a release
+  packages: write    # to publish packages
+
 jobs:
   publish:
+    # No if-protection needed: write permission needed to push tags, not allowed for forks
     runs-on: ubuntu-latest
 
     steps:
