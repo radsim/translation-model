@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Cyface GmbH
+# Copyright 2019-2026 Cyface GmbH
 #
 # This file is part of the RadSim Translation Model.
 #
@@ -30,8 +30,14 @@ on:
     branches:
       - main
 
+# Fallback: explicit workflow permissions (as little as required)
+permissions:
+  contents: read    # no private packages needed
+
 jobs:
   build:
+    # Only for pushes (assumes protected main branch) and for PRs from this repo (not from forks)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
     steps:
