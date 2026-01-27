@@ -22,7 +22,7 @@
 # @author Armin Schnabel
 name: Gradle Build
 
-on:
+on:break
   push:
     branches:
       - main
