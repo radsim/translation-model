@@ -385,13 +385,14 @@ class BikeInfrastructureTest {
                     ),
                     BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT
                 ),
-                // Way 1507166 - Lenneplatz: tags as filtered by backend's NetworkExtractor
+                // Way 1507166 - Lenneplatz: tags as filtered by backend's NetworkExtractor (with BIK-1598 fix)
                 BikeInfrastructureParameters(
                     mapOf(
                         "@id" to "1507166",
                         "cycleway:left" to "no",
                         "cycleway:right" to "track",
                         "cycleway:right:bicycle" to "designated",
+                        "cycleway:right:segregated" to "yes",
                         "highway" to "secondary",
                         "lanes" to "2",
                         "maxspeed" to "50",
