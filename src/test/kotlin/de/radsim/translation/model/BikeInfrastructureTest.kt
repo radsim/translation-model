@@ -43,6 +43,25 @@ class BikeInfrastructureTest {
         )
     }
 
+    /**
+     * [BIK-1598] Verifies that OSM ways with `cycleway:right=track` or `cycleway:both=track`
+     * on secondary roads are mapped to [SimplifiedBikeInfrastructure.BICYCLE_WAY].
+     */
+    @ParameterizedTest
+    @MethodSource("bicycleWayBugParameters")
+    fun testOsmTagsMappedToSimplifiedBicycleWay(parameter: BikeInfrastructureParameters) {
+        // Act
+        val result = BikeInfrastructure.toRadSim(parameter.osmTags)
+
+        // Assert
+        assertThat(
+            "Expected OSM tags ${parameter.osmTags} to simplify to BICYCLE_WAY but " +
+                "got ${result.simplified} (detailed: $result)",
+            result.simplified,
+            equalTo(SimplifiedBikeInfrastructure.BICYCLE_WAY)
+        )
+    }
+
     @ParameterizedTest
     @MethodSource("simplificationMappingParameters")
     fun testSimplificationMapping(parameter: SimplifiedInfrastructureParameters) {
@@ -334,6 +353,95 @@ class BikeInfrastructureTest {
                     ),
                     BikeInfrastructure.BICYCLE_WAY_RIGHT_PEDESTRIAN_LEFT
                 )
+            )
+        }
+
+        /**
+         * [BIK-1598] OSM ways with `cycleway:right=track` or `cycleway:both=track` on secondary
+         * roads that should map to [SimplifiedBikeInfrastructure.BICYCLE_WAY].
+         */
+        @Suppress("SpellCheckingInspection")
+        @JvmStatic
+        fun bicycleWayBugParameters(): Stream<BikeInfrastructureParameters> {
+            return Stream.of(
+                // Way 1507166 - Lenneplatz: tags from RoadNetwork PBF as the TUD sees them without any filters
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:left" to "no",
+                        "cycleway:right" to "track",
+                        "cycleway:right:bicycle" to "designated",
+                        "cycleway:right:oneway" to "yes",
+                        "cycleway:right:segregated" to "yes",
+                        "highway" to "secondary",
+                        "lanes" to "2",
+                        "lit" to "yes",
+                        "maxspeed" to "50",
+                        "name" to "Lenneplatz",
+                        "oneway" to "yes",
+                        "sidewalk:right" to "yes",
+                        "sidewalk:right:surface" to "paving_stones",
+                        "smoothness" to "excellent",
+                        "surface" to "asphalt",
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT
+                ),
+                // Way 1507166 - Lenneplatz: tags as filtered by backend's NetworkExtractor
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "@id" to "1507166",
+                        "cycleway:left" to "no",
+                        "cycleway:right" to "track",
+                        "cycleway:right:bicycle" to "designated",
+                        "highway" to "secondary",
+                        "lanes" to "2",
+                        "maxspeed" to "50",
+                        "sidewalk:right" to "yes",
+                        "surface" to "asphalt",
+                        "base_id" to "24251523",
+                        "type" to "segment",
+                        "segment_length" to "25.86",
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT
+                ),
+                // Way 21648974 - Gerhart-Hauptmann-Str.: cycleway:right=track (no cycleway:left)
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:right" to "track",
+                        "cycleway:right:bicycle" to "designated",
+                        "cycleway:right:oneway" to "yes",
+                        "cycleway:right:segregated" to "yes",
+                        "cycleway:right:surface" to "paving_stones",
+                        "highway" to "secondary",
+                        "lanes" to "1",
+                        "lit" to "yes",
+                        "maxspeed" to "50",
+                        "name" to "Gerhart-Hauptmann-Strasse",
+                        "oneway" to "yes",
+                        "sidewalk:right" to "yes",
+                        "sidewalk:right:surface" to "paving_stones",
+                        "surface" to "asphalt",
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_RIGHT_NO_LEFT
+                ),
+                // Way 7414471 - Gerhart-Hauptmann-Str.: cycleway:both=track
+                BikeInfrastructureParameters(
+                    mapOf(
+                        "cycleway:both" to "track",
+                        "cycleway:both:bicycle" to "designated",
+                        "cycleway:both:segregated" to "yes",
+                        "cycleway:left:oneway" to "-1",
+                        "cycleway:right:oneway" to "yes",
+                        "embedded_rails" to "tram",
+                        "highway" to "secondary",
+                        "lanes" to "4",
+                        "lit" to "yes",
+                        "name" to "Gerhart-Hauptmann-Strasse",
+                        "sidewalk:both" to "yes",
+                        "sidewalk:both:surface" to "paving_stones",
+                        "surface" to "asphalt",
+                    ),
+                    BikeInfrastructure.BICYCLE_WAY_BOTH
+                ),
             )
         }
 
