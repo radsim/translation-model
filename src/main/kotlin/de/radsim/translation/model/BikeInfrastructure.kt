@@ -152,6 +152,22 @@ enum class BikeInfrastructure(
         val specificOsmTags = OsmTag.entries.map { it.key }
 
         /**
+         * OSM tag key substrings that are used with substring matching (`in key`) in the mapping logic.
+         *
+         * Tags like `cycleway:right:segregated` or `cycleway:both:traffic_sign` contain these substrings and must be
+         * preserved during filtering even though they are not exact matches in [specificOsmTags]. [BIK-1598]
+         *
+         * This list is used by `backend.NetworkExtractor` to ensure these tags are exported.
+         */
+        @Suppress("unused") // Part of the API
+        val specificOsmTagSubstrings: List<String> = listOf(
+            OsmTag.SEGREGATED, OsmTag.RIGHT_BICYCLE, OsmTag.LEFT_BICYCLE,
+            OsmTag.RIGHT_FOOT, OsmTag.LEFT_FOOT,
+            OsmTag.RIGHT_TRAFFIC_SIGN, OsmTag.LEFT_TRAFFIC_SIGN,
+            OsmTag.RIGHT_LANE, OsmTag.LEFT_LANE,
+        ).map { it.key }
+
+        /**
          * All OSM tags that are used to determine the RadSim infrastructure type.
          */
         @Suppress("SpellCheckingInspection")
