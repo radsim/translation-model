@@ -25,9 +25,10 @@ name: Gradle Publish
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+*'
+      - '[0-9]*.[0-9]*.[0-9]*' # glob not reg-ex
+      - '[0-9]*.[0-9]*.[0-9]*-*'
 
-# Fallback: explicit workflow permissions (as little as required)
+# Explicit workflow permissions
 permissions:
   contents: write    # to create a release
   packages: write    # to publish packages
@@ -39,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -59,15 +60,13 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      # Automatically mark this tag as release on GitHub
+      # Automatically mark this tag as release on GitHub (requires actions/checkout@v6)
       - name: Mark tag as release on Github
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          # Release tags of format `1.2.3-beta1 / -alpha1 / -test1` are considered a pre-release
-          prerelease: ${{ contains(github.ref, 'test') || contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "$(git tag -l --format='%(contents)' "${{ github.ref_name }}")" \
+            ${{ (contains(github.ref, 'test') || contains(github.ref, 'alpha') || contains(github.ref, 'beta')) && '--prerelease' || '' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
