@@ -51,6 +51,29 @@ class BackMappingMatrixTest {
         }
     }
 
+    @Test
+    fun `NO to CYCLE_HIGHWAY should not stall when way has access=no`() {
+        // All 89 stalls from bulk back-mapping test had access=no. The access=no check in
+        // toRadSim() returned NO before reaching isCycleHighway(), so adding cycle_highway=yes
+        // didn't change the classification.
+        val accessNoTags = mapOf(
+            "highway" to "service",
+            "access" to "no",
+            "@id" to "1420897",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value
+            )
+        }
+    }
+
     @TestFactory
     fun `all infrastructure combinations should back-map without recursion or stall`(): List<DynamicTest> {
         val values = SimplifiedBikeInfrastructure.entries

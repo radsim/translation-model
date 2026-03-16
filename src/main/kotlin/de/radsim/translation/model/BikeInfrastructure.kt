@@ -278,14 +278,15 @@ enum class BikeInfrastructure(
             // Validate that we're receiving OSM tags, not RadSim tags [BIK-1478]
             TagFormatValidator.requireOsmFormat(tags, "BikeInfrastructure.toRadSim()")
 
+            // Explicit infrastructure designations take priority over access restrictions
+            if (isCycleHighway(tags)) return CYCLE_HIGHWAY
+            if (isBikeRoad(tags)) return BICYCLE_ROAD
+
             if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
                 (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
             ) {
                 return NO // unpacked from `service`
             }
-
-            if (isCycleHighway(tags)) return CYCLE_HIGHWAY
-            if (isBikeRoad(tags)) return BICYCLE_ROAD
             if (isService(tags)) return SERVICE_MISC
 
             if (bicycleWayRight(tags)) {
