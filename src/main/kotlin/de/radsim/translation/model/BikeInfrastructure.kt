@@ -284,9 +284,9 @@ enum class BikeInfrastructure(
                 return NO // unpacked from `service`
             }
 
-            if (isService(tags)) return SERVICE_MISC
             if (isCycleHighway(tags)) return CYCLE_HIGHWAY
             if (isBikeRoad(tags)) return BICYCLE_ROAD
+            if (isService(tags)) return SERVICE_MISC
 
             if (bicycleWayRight(tags)) {
                 return when {
