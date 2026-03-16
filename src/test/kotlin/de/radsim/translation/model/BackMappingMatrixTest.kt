@@ -20,9 +20,36 @@ package de.radsim.translation.model
 
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 
 class BackMappingMatrixTest {
+
+    @Test
+    fun `NO to CYCLE_HIGHWAY should not stall when current way is a path`() {
+        // Reproducer: highway=path with bicycle=yes, foot=yes, segregated=yes is classified as
+        // SERVICE_MISC (simplified: NO). Adding cycle_highway=yes should transition to CYCLE_HIGHWAY,
+        // but isService() was checked before isCycleHighway() in toRadSim(), so the updated tags
+        // still matched isService() first, causing a stall.
+        val pathTags = mapOf(
+            "highway" to "path",
+            "bicycle" to "yes",
+            "foot" to "yes",
+            "segregated" to "yes",
+            "@id" to "11917677",
+            "base_id" to "147300297",
+            "type" to "segment",
+            "segment_length" to "13.67",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = pathTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.CYCLE_HIGHWAY.value
+            )
+        }
+    }
 
     @TestFactory
     fun `all infrastructure combinations should back-map without recursion or stall`(): List<DynamicTest> {
