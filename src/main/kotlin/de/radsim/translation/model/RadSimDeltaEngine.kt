@@ -85,10 +85,12 @@ object RadSimDeltaEngine {
 
         // 4) Guard: if rule didn’t move category, it’s a stall
         if (next == from) {
-            LOGGER.error(
-                "Stall: from=$from to=$to\nCurrent=$current\nDelta=$delta\nUpdated=$updated\nNext=$next"
-            )
-            error("Back-mapping stalled: $from → $to produced no category change")
+            val wayId = current["@id"] ?: "?"
+            val hw = current["highway"] ?: "?"
+            val tags = current.entries.filter { it.key !in setOf("@id", "base_id", "type", "segment_length") }
+                .joinToString(",") { "${it.key}=${it.value}" }
+            LOGGER.error("STALL wayId=$wayId from=$from to=$to highway=$hw tags=[$tags]")
+            error("Back-mapping stalled: $from → $to produced no category change (wayId=$wayId)")
         }
 
         // 5) Done or recurse
