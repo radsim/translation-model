@@ -37,6 +37,10 @@ object BackMappingRules {
             setOf(OsmTag("highway", "cycleway"), OsmTag("cycle_highway", "yes"))
         },
         // R19
+        // TODO: Consider also producing smoothness=excellent for Comfort1 surfaces, so new ways
+        //  can compete with existing ones that typically have smoothness tags. Currently smoothness
+        //  only affects GH speed (not priority) and the custom model caps speed at 15, so no
+        //  practical impact yet — but would matter if the speed cap is removed. [BIK-1376]
         RuleKey(NO, BICYCLE_WAY) to { _ ->
             setOf(
                 OsmTag("highway", "cycleway"),
