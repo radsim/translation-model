@@ -36,7 +36,7 @@ class SimplifiedBikeInfrastructureTest {
     @Test
     fun `NO to CycleHighway should set cycle_highway tag`() {
         val result = applyBackMap(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
-        assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
+        assertEquals(setOf(OsmTag("highway", "cycleway"), OsmTag("cycle_highway", "yes")), result)
     }
 
     @Test
@@ -97,7 +97,7 @@ class SimplifiedBikeInfrastructureTest {
     @Test
     fun `BusLane to CycleHighway should only add cycle_highway tag`() {
         val result = applyBackMap(SimplifiedBikeInfrastructure.CYCLE_HIGHWAY)
-        assertEquals(setOf(OsmTag("cycle_highway", "yes")), result)
+        assertEquals(setOf(OsmTag("highway", "cycleway"), OsmTag("cycle_highway", "yes")), result)
     }
 
     @Test

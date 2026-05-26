@@ -122,6 +122,7 @@ class BackMappingRulesTest {
     @Test
     fun `R19 - no to bicycle_way`() {
         val expected = tags(
+            "highway" to "cycleway",
             "bicycle" to "designated",
             "foot" to "designated",
             "segregated" to "yes"
@@ -187,8 +188,38 @@ class BackMappingRulesTest {
     }
 
     @Test
+    fun `CYCLE_HIGHWAY to BICYCLE_ROAD - replaces cycleway with residential`() {
+        val expected = tags(
+            "highway" to "residential",
+            "bicycle_road" to "yes",
+            "cycle_highway" to "",
+        )
+        val actual = BackMappingRules.applyRule(
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
+            SimplifiedBikeInfrastructure.BICYCLE_ROAD,
+            mapOf("highway" to "cycleway", "cycle_highway" to "yes")
+        )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `CYCLE_HIGHWAY to BICYCLE_ROAD - preserves non-cycleway highway`() {
+        val expected = tags(
+            "highway" to "tertiary",
+            "bicycle_road" to "yes",
+            "cycle_highway" to "",
+        )
+        val actual = BackMappingRules.applyRule(
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
+            SimplifiedBikeInfrastructure.BICYCLE_ROAD,
+            mapOf("highway" to "tertiary", "cycle_highway" to "yes")
+        )
+        assertEquals(expected, actual)
+    }
+
+    @Test
     fun `NO to CYCLE_HIGHWAY - without service road`() {
-        val expected = tags("cycle_highway" to "yes")
+        val expected = tags("highway" to "cycleway", "cycle_highway" to "yes")
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.NO,
             SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
