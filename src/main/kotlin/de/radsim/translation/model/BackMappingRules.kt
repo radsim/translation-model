@@ -33,19 +33,17 @@ object BackMappingRules {
         RuleKey(NO, BICYCLE_ROAD) to { _ ->
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
-        RuleKey(NO, CYCLE_HIGHWAY) to { tags ->
-            // Added, even though this is not a way tags (cycle_highway)
-            val highway = tags["highway"] as? String
-            val maybeHighwayChange = if (highway == "service") {
-                setOf(OsmTag("highway", "cycleway"))
-            } else {
-                emptySet()
-            }
-            maybeHighwayChange + OsmTag("cycle_highway", "yes")
+        RuleKey(NO, CYCLE_HIGHWAY) to { _ ->
+            setOf(OsmTag("highway", "cycleway"), OsmTag("cycle_highway", "yes"))
         },
         // R19
         RuleKey(NO, BICYCLE_WAY) to { _ ->
-            setOf(OsmTag("bicycle", "designated"), OsmTag("foot", "designated"), OsmTag("segregated", "yes"))
+            setOf(
+                OsmTag("highway", "cycleway"),
+                OsmTag("bicycle", "designated"),
+                OsmTag("foot", "designated"),
+                OsmTag("segregated", "yes"),
+            )
         },
         // R20
         RuleKey(NO, BICYCLE_LANE) to { _ ->
@@ -232,11 +230,12 @@ object BackMappingRules {
         // CYCLE_HIGHWAY → others (R2–R7)
         // -------------------------------------------------------------------
         RuleKey(CYCLE_HIGHWAY, BICYCLE_ROAD) to { tags ->
-            val highway = tags["highway"] ?: "residential"
+            val highway = tags["highway"] as? String
+            val targetHighway = if (highway == null || highway == "cycleway") "residential" else highway
             setOf(
-                OsmTag("highway", highway),
+                OsmTag("highway", targetHighway),
                 OsmTag("bicycle_road", "yes"),
-                OsmTag("cycle_highway", ""), // Added, even though this is not a way tags
+                OsmTag("cycle_highway", ""),
             )
         },
 

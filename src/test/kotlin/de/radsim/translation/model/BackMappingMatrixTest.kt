@@ -106,7 +106,7 @@ class BackMappingMatrixTest {
                 mapOf("bicycle_road" to "yes")
 
             SimplifiedBikeInfrastructure.CYCLE_HIGHWAY ->
-                mapOf("cycle_highway" to "yes")
+                mapOf("highway" to "cycleway", "cycle_highway" to "yes")
 
             SimplifiedBikeInfrastructure.BICYCLE_WAY ->
                 mapOf("highway" to "cycleway") // generic bike_way signature

@@ -122,6 +122,7 @@ class BackMappingRulesTest {
     @Test
     fun `R19 - no to bicycle_way`() {
         val expected = tags(
+            "highway" to "cycleway",
             "bicycle" to "designated",
             "foot" to "designated",
             "segregated" to "yes"
@@ -188,7 +189,7 @@ class BackMappingRulesTest {
 
     @Test
     fun `NO to CYCLE_HIGHWAY - without service road`() {
-        val expected = tags("cycle_highway" to "yes")
+        val expected = tags("highway" to "cycleway", "cycle_highway" to "yes")
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.NO,
             SimplifiedBikeInfrastructure.CYCLE_HIGHWAY,
