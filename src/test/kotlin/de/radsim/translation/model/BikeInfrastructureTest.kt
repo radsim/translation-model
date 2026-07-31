@@ -233,7 +233,8 @@ class BikeInfrastructureTest {
                         "cycleway:right" to "track",
                         "sidewalk:right" to "yes"
                     ),
-                    BikeInfrastructure.SERVICE_MISC
+                    // [BIK-2058] cycleway infra now takes priority over service
+                    BikeInfrastructure.MIXED_WAY_RIGHT_NO_LEFT
                 ),
                 BikeInfrastructureParameters(
                     mapOf(
@@ -253,7 +254,8 @@ class BikeInfrastructureTest {
                         "foot" to "yes",
                         "segregated" to "no"
                     ),
-                    BikeInfrastructure.SERVICE_MISC
+                    // [BIK-2058] cycleway infra now takes priority over service
+                    BikeInfrastructure.BUS_LANE_RIGHT_MIXED_LEFT
                 ),
 
                 // OSM tags that should map to 'no' due to not accessible

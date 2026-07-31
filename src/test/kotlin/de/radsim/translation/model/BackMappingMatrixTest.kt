@@ -74,6 +74,71 @@ class BackMappingMatrixTest {
         }
     }
 
+    @Test
+    fun `NO to BICYCLE_LANE should not stall when way has access=no`() {
+        // [BIK-2058] Reproducer: way 18030960 in Zwickau, classified as NO due to access=no.
+        // R20 adds cycleway=lane but the access=no check in toRadSim() returned NO before
+        // reaching isBikeLaneRight(), causing a stall.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "18030960",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_LANE.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to BICYCLE_LANE should not stall when current way is a service road`() {
+        // isService() matches highway=service before isBikeLaneRight() is reached.
+        val serviceTags = mapOf(
+            "highway" to "service",
+            "@id" to "99999",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = serviceTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_LANE.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to BUS_LANE should not stall when way has access=no`() {
+        // Same class of bug as NO->BICYCLE_LANE: R21 adds cycleway=share_busway but
+        // access=no check fires first.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99998",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BUS_LANE.value
+            )
+        }
+    }
+
     @TestFactory
     fun `all infrastructure combinations should back-map without recursion or stall`(): List<DynamicTest> {
         val values = SimplifiedBikeInfrastructure.entries

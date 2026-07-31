@@ -282,12 +282,15 @@ enum class BikeInfrastructure(
             if (isCycleHighway(tags)) return CYCLE_HIGHWAY
             if (isBikeRoad(tags)) return BICYCLE_ROAD
 
-            if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
-                (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
-            ) {
-                return NO // unpacked from `service`
+            // Explicit cycleway infrastructure also takes priority [BIK-2058]
+            if (!hasCyclewayInfrastructure(tags)) {
+                if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
+                    (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
+                ) {
+                    return NO // unpacked from `service`
+                }
+                if (isService(tags)) return SERVICE_MISC
             }
-            if (isService(tags)) return SERVICE_MISC
 
             if (bicycleWayRight(tags)) {
                 return when {
@@ -776,6 +779,24 @@ enum class BikeInfrastructure(
             !isIndoor(tags) && (
                 (isFootpath(tags) && !canBike(tags)) || (isPath(tags) && canWalkLeft(tags) && !canBike(tags))
                 )
+        }
+
+        private val CYCLEWAY_INFRA_VALUES = listOf(
+            OsmValue.LANE.value,
+            OsmValue.SHARED_LANE.value,
+            OsmValue.TRACK.value,
+            OsmValue.SIDE_PATH.value,
+            OsmValue.CROSSING.value,
+            OsmValue.SHARE_BUS_WAY.value,
+        )
+
+        private val hasCyclewayInfrastructure: (Map<String, Any>) -> Boolean = { tags ->
+            listOf(
+                tags[OsmTag.CYCLEWAY.key],
+                tags[OsmTag.CYCLEWAY_RIGHT.key],
+                tags[OsmTag.CYCLEWAY_LEFT.key],
+                tags[OsmTag.CYCLEWAY_BOTH.key],
+            ).any { (it as? String) in CYCLEWAY_INFRA_VALUES }
         }
 
         val isCycleHighway: (Map<String, Any>) -> Boolean = { tags ->

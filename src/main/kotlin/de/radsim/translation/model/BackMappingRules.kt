@@ -164,7 +164,7 @@ object BackMappingRules {
             )
         },
         RuleKey(BICYCLE_LANE, NO) to { _ ->
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
+            setOf(OsmTag("highway", "path"), OsmTag("bicycle", ""), OsmTag("cycleway", "")) // R7
         },
         RuleKey(BICYCLE_LANE, CYCLE_HIGHWAY) to { _ ->
             setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
@@ -195,7 +195,7 @@ object BackMappingRules {
             ) // R13
         },
         RuleKey(BUS_LANE, NO) to { _ ->
-            setOf(OsmTag("highway", "path"), OsmTag("bicycle", "")) // R7
+            setOf(OsmTag("highway", "path"), OsmTag("bicycle", ""), OsmTag("cycleway", "")) // R7
         },
         RuleKey(BUS_LANE, CYCLE_HIGHWAY) to { _ ->
             setOf(OsmTag("cycle_highway", "yes")) // Added, even though this is not a way tags
