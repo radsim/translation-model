@@ -282,8 +282,8 @@ enum class BikeInfrastructure(
             if (isCycleHighway(tags)) return CYCLE_HIGHWAY
             if (isBikeRoad(tags)) return BICYCLE_ROAD
 
-            // Explicit cycleway infrastructure also takes priority [BIK-2058]
-            if (!hasCyclewayInfrastructure(tags)) {
+            // Explicit bike infrastructure also takes priority [BIK-2058]
+            if (!hasExplicitBikeInfrastructure(tags)) {
                 if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
                     (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
                 ) {
@@ -790,8 +790,10 @@ enum class BikeInfrastructure(
             OsmValue.SHARE_BUS_WAY.value,
         )
 
-        private fun hasCyclewayInfrastructure(tags: Map<String, Any>): Boolean =
-            tags[OsmTag.CYCLEWAY.key] as? String in CYCLEWAY_INFRA_VALUES ||
+        private fun hasExplicitBikeInfrastructure(tags: Map<String, Any>): Boolean =
+            tags[OsmTag.HIGHWAY.key] as? String == OsmValue.CYCLEWAY.value ||
+                tags[OsmTag.BICYCLE.key] as? String == OsmValue.DESIGNATED.value ||
+                tags[OsmTag.CYCLEWAY.key] as? String in CYCLEWAY_INFRA_VALUES ||
                 tags[OsmTag.CYCLEWAY_RIGHT.key] as? String in CYCLEWAY_INFRA_VALUES ||
                 tags[OsmTag.CYCLEWAY_LEFT.key] as? String in CYCLEWAY_INFRA_VALUES ||
                 tags[OsmTag.CYCLEWAY_BOTH.key] as? String in CYCLEWAY_INFRA_VALUES

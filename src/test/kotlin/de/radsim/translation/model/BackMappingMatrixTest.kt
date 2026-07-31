@@ -139,10 +139,54 @@ class BackMappingMatrixTest {
         }
     }
 
+    @Test
+    fun `NO to BICYCLE_WAY should not stall when way has access=no`() {
+        // R19 sets highway=cycleway + bicycle=designated but no cycleway* tag.
+        // The guard must also recognize highway=cycleway as explicit bike infra.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99997",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_WAY.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to MIXED_WAY should not stall when way has access=no`() {
+        // R22 sets highway=path + bicycle=designated but no cycleway* tag.
+        // The guard must also recognize bicycle=designated as explicit bike infra.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99996",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.MIXED_WAY.value
+            )
+        }
+    }
+
     @TestFactory
     fun `to NO should not stall when way has cycleway=track`(): List<DynamicTest> {
         // Every ->NO rule must remove the cycleway tag, otherwise the
-        // hasCyclewayInfrastructure guard skips isService() and the way
+        // hasExplicitBikeInfrastructure guard skips isService() and the way
         // re-classifies as bike infra instead of NO.
         val categories = SimplifiedBikeInfrastructure.entries.filter {
             it != SimplifiedBikeInfrastructure.NO
