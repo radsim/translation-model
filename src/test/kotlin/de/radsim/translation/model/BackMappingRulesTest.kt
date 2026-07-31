@@ -47,7 +47,14 @@ class BackMappingRulesTest {
 
     @Test
     fun `R7 - highway=path bicycle=NULL`() {
-        val expected = tags("highway" to "path", "bicycle" to "")
+        val expected = tags(
+            "highway" to "path",
+            "bicycle" to "",
+            "cycleway" to "",
+            "cycleway:right" to "",
+            "cycleway:left" to "",
+            "cycleway:both" to "",
+        )
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.BICYCLE_WAY,
             SimplifiedBikeInfrastructure.NO,

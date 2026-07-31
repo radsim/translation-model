@@ -74,6 +74,141 @@ class BackMappingMatrixTest {
         }
     }
 
+    @Test
+    fun `NO to BICYCLE_LANE should not stall when way has access=no`() {
+        // [BIK-2058] Reproducer: way 18030960 in Zwickau, classified as NO due to access=no.
+        // R20 adds cycleway=lane but the access=no check in toRadSim() returned NO before
+        // reaching isBikeLaneRight(), causing a stall.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "18030960",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_LANE.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to BICYCLE_LANE should not stall when current way is a service road`() {
+        // isService() matches highway=service before isBikeLaneRight() is reached.
+        val serviceTags = mapOf(
+            "highway" to "service",
+            "@id" to "99999",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = serviceTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_LANE.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to BUS_LANE should not stall when way has access=no`() {
+        // Same class of bug as NO->BICYCLE_LANE: R21 adds cycleway=share_busway but
+        // access=no check fires first.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99998",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BUS_LANE.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to BICYCLE_WAY should not stall when way has access=no`() {
+        // R19 sets highway=cycleway + bicycle=designated but no cycleway* tag.
+        // The guard must also recognize highway=cycleway as explicit bike infra.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99997",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.BICYCLE_WAY.value
+            )
+        }
+    }
+
+    @Test
+    fun `NO to MIXED_WAY should not stall when way has access=no`() {
+        // R22 sets highway=path + bicycle=designated but no cycleway* tag.
+        // The guard must also recognize bicycle=designated as explicit bike infra.
+        val accessNoTags = mapOf(
+            "highway" to "secondary",
+            "access" to "no",
+            "@id" to "99996",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+
+        assertDoesNotThrow {
+            RadSimDeltaEngine.computeDelta(
+                currentTags = accessNoTags,
+                key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                value = SimplifiedBikeInfrastructure.MIXED_WAY.value
+            )
+        }
+    }
+
+    @TestFactory
+    fun `to NO should not stall when way has cycleway infra tags`(): List<DynamicTest> {
+        // Every ->NO rule must remove all cycleway tags, otherwise the
+        // hasExplicitBikeInfrastructure guard skips isService() and the way
+        // re-classifies as bike infra instead of NO.
+        val categories = SimplifiedBikeInfrastructure.entries.filter {
+            it != SimplifiedBikeInfrastructure.NO
+        }
+        val cyclewayKeys = listOf("cycleway", "cycleway:right", "cycleway:both")
+
+        return categories.flatMap { from ->
+            cyclewayKeys.map { key ->
+                DynamicTest.dynamicTest("$from → NO with $key=track") {
+                    val context = minimalContextFor(from) + mapOf(key to "track")
+                    assertDoesNotThrow {
+                        RadSimDeltaEngine.computeDelta(
+                            currentTags = context,
+                            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                            value = SimplifiedBikeInfrastructure.NO.value
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     @TestFactory
     fun `all infrastructure combinations should back-map without recursion or stall`(): List<DynamicTest> {
         val values = SimplifiedBikeInfrastructure.entries

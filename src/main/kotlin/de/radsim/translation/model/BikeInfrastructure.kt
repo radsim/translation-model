@@ -282,12 +282,15 @@ enum class BikeInfrastructure(
             if (isCycleHighway(tags)) return CYCLE_HIGHWAY
             if (isBikeRoad(tags)) return BICYCLE_ROAD
 
-            if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
-                (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
-            ) {
-                return NO // unpacked from `service`
+            // Explicit bike infrastructure also takes priority [BIK-2058]
+            if (!hasExplicitBikeInfrastructure(tags)) {
+                if ((tags.containsKey(OsmTag.ACCESS.key) && isNotAccessible(tags)) ||
+                    (tags.containsKey(OsmTag.TRAM.key) && tags[OsmTag.TRAM.key] == OsmValue.YES.value)
+                ) {
+                    return NO // unpacked from `service`
+                }
+                if (isService(tags)) return SERVICE_MISC
             }
-            if (isService(tags)) return SERVICE_MISC
 
             if (bicycleWayRight(tags)) {
                 return when {
@@ -777,6 +780,23 @@ enum class BikeInfrastructure(
                 (isFootpath(tags) && !canBike(tags)) || (isPath(tags) && canWalkLeft(tags) && !canBike(tags))
                 )
         }
+
+        private val CYCLEWAY_INFRA_VALUES = hashSetOf(
+            OsmValue.LANE.value,
+            OsmValue.SHARED_LANE.value,
+            OsmValue.TRACK.value,
+            OsmValue.SIDE_PATH.value,
+            OsmValue.CROSSING.value,
+            OsmValue.SHARE_BUS_WAY.value,
+        )
+
+        private fun hasExplicitBikeInfrastructure(tags: Map<String, Any>): Boolean =
+            tags[OsmTag.HIGHWAY.key] as? String == OsmValue.CYCLEWAY.value ||
+                tags[OsmTag.BICYCLE.key] as? String == OsmValue.DESIGNATED.value ||
+                tags[OsmTag.CYCLEWAY.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_RIGHT.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_LEFT.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_BOTH.key] as? String in CYCLEWAY_INFRA_VALUES
 
         val isCycleHighway: (Map<String, Any>) -> Boolean = { tags ->
             val cycleHighway = tags[OsmTag.CYCLE_HIGHWAY.key] as? String

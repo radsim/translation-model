@@ -75,7 +75,11 @@ class SimplifiedBikeInfrastructureTest {
         assertEquals(
             setOf(
                 OsmTag("highway", "path"),
-                OsmTag("bicycle", "")
+                OsmTag("bicycle", ""),
+                OsmTag("cycleway", ""),
+                OsmTag("cycleway:right", ""),
+                OsmTag("cycleway:left", ""),
+                OsmTag("cycleway:both", ""),
             ),
             result
         )
