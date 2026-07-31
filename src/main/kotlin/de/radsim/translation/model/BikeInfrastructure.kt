@@ -781,7 +781,7 @@ enum class BikeInfrastructure(
                 )
         }
 
-        private val CYCLEWAY_INFRA_VALUES = listOf(
+        private val CYCLEWAY_INFRA_VALUES = hashSetOf(
             OsmValue.LANE.value,
             OsmValue.SHARED_LANE.value,
             OsmValue.TRACK.value,
@@ -790,14 +790,11 @@ enum class BikeInfrastructure(
             OsmValue.SHARE_BUS_WAY.value,
         )
 
-        private val hasCyclewayInfrastructure: (Map<String, Any>) -> Boolean = { tags ->
-            listOf(
-                tags[OsmTag.CYCLEWAY.key],
-                tags[OsmTag.CYCLEWAY_RIGHT.key],
-                tags[OsmTag.CYCLEWAY_LEFT.key],
-                tags[OsmTag.CYCLEWAY_BOTH.key],
-            ).any { (it as? String) in CYCLEWAY_INFRA_VALUES }
-        }
+        private fun hasCyclewayInfrastructure(tags: Map<String, Any>): Boolean =
+            tags[OsmTag.CYCLEWAY.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_RIGHT.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_LEFT.key] as? String in CYCLEWAY_INFRA_VALUES ||
+                tags[OsmTag.CYCLEWAY_BOTH.key] as? String in CYCLEWAY_INFRA_VALUES
 
         val isCycleHighway: (Map<String, Any>) -> Boolean = { tags ->
             val cycleHighway = tags[OsmTag.CYCLE_HIGHWAY.key] as? String

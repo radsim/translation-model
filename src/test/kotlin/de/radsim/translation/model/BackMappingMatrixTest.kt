@@ -140,6 +140,29 @@ class BackMappingMatrixTest {
     }
 
     @TestFactory
+    fun `to NO should not stall when way has cycleway=track`(): List<DynamicTest> {
+        // Every ->NO rule must remove the cycleway tag, otherwise the
+        // hasCyclewayInfrastructure guard skips isService() and the way
+        // re-classifies as bike infra instead of NO.
+        val categories = SimplifiedBikeInfrastructure.entries.filter {
+            it != SimplifiedBikeInfrastructure.NO
+        }
+
+        return categories.map { from ->
+            DynamicTest.dynamicTest("$from → NO with cycleway=track") {
+                val context = minimalContextFor(from) + mapOf("cycleway" to "track")
+                assertDoesNotThrow {
+                    RadSimDeltaEngine.computeDelta(
+                        currentTags = context,
+                        key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                        value = SimplifiedBikeInfrastructure.NO.value
+                    )
+                }
+            }
+        }
+    }
+
+    @TestFactory
     fun `all infrastructure combinations should back-map without recursion or stall`(): List<DynamicTest> {
         val values = SimplifiedBikeInfrastructure.entries
 
