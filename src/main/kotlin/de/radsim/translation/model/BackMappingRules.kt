@@ -31,6 +31,41 @@ object BackMappingRules {
         OsmTag("cycleway:both", ""),
     )
 
+    /**
+     * Tags which mark the way itself as a path for bicycles and pedestrians.
+     *
+     * A lane and a bus lane are markings on the carriageway, so the way becomes an ordinary road.
+     * The path signature is then wrong, and `highway=secondary` together with `bicycle=designated`
+     * is a contradiction in OSM.
+     *
+     * The removals are also what stops the back-mapping from stalling. Four predicates in
+     * [BikeInfrastructure] keep a way in `BICYCLE_WAY` after the rule sets `highway=secondary`:
+     *  - `isSegregated` matches any key which contains "segregated", not the bare key alone.
+     *  - `isObligatedSegregated` reads traffic sign 241 and ignores `segregated` completely.
+     *  - `isBikePathRight` matches a key which contains "right:bicycle", and a side-specific
+     *    `cycleway:right=track`.
+     *  - the designated-path clause needs `bicycle` and `foot` at the same time.
+     *
+     * Every one of those paths needs `bicycle` or `foot`, so both must go. The engine then reaches
+     * the target category instead of aborting the whole base net job. [BIK-2092]
+     *
+     * The bare `cycleway` key is absent on purpose. The two rules set it to the new value, and a
+     * set which holds both a removal and a value for one key applies in an undefined order.
+     *
+     * `traffic_sign` stays. It can carry unrelated signs, such as 274 for a speed limit.
+     */
+    private val REMOVE_PATH_TAGS = setOf(
+        OsmTag("bicycle", ""),
+        OsmTag("foot", ""),
+        OsmTag("segregated", ""),
+        OsmTag("cycleway:right", ""),
+        OsmTag("cycleway:left", ""),
+        OsmTag("cycleway:both", ""),
+        OsmTag("cycleway:right:bicycle", ""),
+        OsmTag("cycleway:left:bicycle", ""),
+        OsmTag("cycleway:both:bicycle", ""),
+    )
+
     private val rules: Map<RuleKey, (Map<String, Any>) -> Set<OsmTag>> = mapOf(
 
         // -------------------------------------------------------------------
@@ -128,10 +163,10 @@ object BackMappingRules {
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
         RuleKey(BICYCLE_WAY, BICYCLE_LANE) to { _ ->
-            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "lane"))
+            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "lane")) + REMOVE_PATH_TAGS
         },
         RuleKey(BICYCLE_WAY, BUS_LANE) to { _ ->
-            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "share_busway"))
+            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "share_busway")) + REMOVE_PATH_TAGS
         },
         RuleKey(BICYCLE_WAY, MIXED_WAY) to { tags ->
             when (tags["highway"]) {

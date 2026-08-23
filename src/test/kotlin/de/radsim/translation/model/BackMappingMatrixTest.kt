@@ -18,7 +18,9 @@
  */
 package de.radsim.translation.model
 
+import de.cyface.model.osm.OsmTag
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -184,6 +186,187 @@ class BackMappingMatrixTest {
     }
 
     @TestFactory
+    fun `segregated designated path should back-map to all categories without stall`(): List<DynamicTest> {
+        // [BIK-2092] Reproducer: way 26852577 in Muenster aborted the whole base net job.
+        // The way is a segregated designated path, so `bicycleWayRight` classifies it as
+        // BICYCLE_WAY through `bicycle=designated` + `foot=designated` + `segregated=yes`.
+        // The BICYCLE_WAY -> BICYCLE_LANE rule only set `highway=secondary` + `cycleway=lane`,
+        // which leaves that triple intact, so the category never changed and the engine stalled.
+        val targets = SimplifiedBikeInfrastructure.entries.filter {
+            it != SimplifiedBikeInfrastructure.BICYCLE_WAY
+        }
+
+        return targets.map { to ->
+            DynamicTest.dynamicTest("BICYCLE_WAY (segregated designated path) → $to") {
+                assertDoesNotThrow {
+                    RadSimDeltaEngine.computeDelta(
+                        currentTags = SEGREGATED_DESIGNATED_PATH,
+                        key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                        value = to.value
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `segregated designated path to BICYCLE_LANE should clear the path signature`() {
+        // [BIK-2092] The delta must remove `segregated`, otherwise `bicycleWayRight` still
+        // matches and the way stays BICYCLE_WAY.
+        val delta = RadSimDeltaEngine.computeDelta(
+            currentTags = SEGREGATED_DESIGNATED_PATH,
+            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+            value = SimplifiedBikeInfrastructure.BICYCLE_LANE.value
+        )
+
+        val result = BikeInfrastructure.toRadSim(apply(SEGREGATED_DESIGNATED_PATH, delta)).simplified
+        assertEquals(SimplifiedBikeInfrastructure.BICYCLE_LANE, result)
+    }
+
+    @Test
+    fun `segregated designated path to BUS_LANE should clear the path signature`() {
+        // [BIK-2092] Same rule family as BICYCLE_LANE: the bus lane marking also sits on the
+        // carriageway, so the designated path signature must go.
+        val delta = RadSimDeltaEngine.computeDelta(
+            currentTags = SEGREGATED_DESIGNATED_PATH,
+            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+            value = SimplifiedBikeInfrastructure.BUS_LANE.value
+        )
+
+        val result = BikeInfrastructure.toRadSim(apply(SEGREGATED_DESIGNATED_PATH, delta)).simplified
+        assertEquals(SimplifiedBikeInfrastructure.BUS_LANE, result)
+    }
+
+    @TestFactory
+    fun `designated path variants should back-map to a carriageway marking`(): List<DynamicTest> {
+        // [BIK-2092] The first fix removed the bare `segregated` key only. Three classifier
+        // predicates read more than that key, so these variants still stalled:
+        //  - `isSegregated` matches any key which contains "segregated", not the bare key.
+        //  - `isObligatedSegregated` reads traffic sign 241 and ignores `segregated`.
+        //  - `isBikePathRight` matches a key which contains "right:bicycle".
+        // The rules therefore also drop `bicycle` and `foot`, which every one of those
+        // paths needs. The backend filters the side-specific keys today
+        // (RadSimToOsmTagMerger.filter), but the library must not depend on that.
+        val variants = mapOf(
+            "sidewalk:both:segregated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "sidewalk:both:segregated" to "yes",
+            ),
+            "cycleway:right:segregated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "cycleway:right:segregated" to "yes",
+            ),
+            "traffic_sign 241" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "traffic_sign" to "241",
+            ),
+            "traffic_sign:forward 237;241" to mapOf(
+                "highway" to "track",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "traffic_sign:forward" to "237;241",
+            ),
+            "cycleway:right:bicycle designated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "cycleway:right:bicycle" to "designated",
+            ),
+        )
+        val targets = listOf(SimplifiedBikeInfrastructure.BICYCLE_LANE, SimplifiedBikeInfrastructure.BUS_LANE)
+
+        return variants.flatMap { (name, tags) ->
+            targets.map { to ->
+                DynamicTest.dynamicTest("$name → $to") {
+                    val context = tags + mapOf(
+                        "@id" to "26852579",
+                        "base_id" to "1",
+                        "type" to "segment",
+                        "segment_length" to "10",
+                    )
+                    val delta = RadSimDeltaEngine.computeDelta(
+                        currentTags = context,
+                        key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                        value = to.value
+                    )
+                    assertEquals(to, BikeInfrastructure.toRadSim(apply(context, delta)).simplified)
+                }
+            }
+        }
+    }
+
+    @TestFactory
+    fun `traffic sign 241 should back-map to a carriageway marking from every category`(): List<DynamicTest> {
+        // [BIK-2092] BICYCLE_ROAD and CYCLE_HIGHWAY reach BICYCLE_LANE through an intermediate
+        // BICYCLE_WAY state, so they stalled on the same leftover traffic sign.
+        val sources = mapOf(
+            SimplifiedBikeInfrastructure.BICYCLE_ROAD to mapOf("bicycle_road" to "yes"),
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY to mapOf("cycle_highway" to "yes"),
+        )
+        val targets = listOf(SimplifiedBikeInfrastructure.BICYCLE_LANE, SimplifiedBikeInfrastructure.BUS_LANE)
+
+        return sources.flatMap { (from, signature) ->
+            targets.map { to ->
+                DynamicTest.dynamicTest("$from (traffic_sign=241) → $to") {
+                    val context = signature + mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "designated",
+                        "traffic_sign" to "241",
+                        "@id" to "26852580",
+                        "base_id" to "1",
+                        "type" to "segment",
+                        "segment_length" to "10",
+                    )
+                    assertDoesNotThrow {
+                        RadSimDeltaEngine.computeDelta(
+                            currentTags = context,
+                            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                            value = to.value
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @TestFactory
+    fun `side specific bike path should back-map to all categories without stall`(): List<DynamicTest> {
+        // [BIK-2092] A side-specific `cycleway:right=track` also makes `isBikePathRight` true.
+        // The BICYCLE_WAY -> BICYCLE_LANE rule sets the bare `cycleway` key only, so the
+        // side-specific tag survives and keeps the way in BICYCLE_WAY.
+        val sideSpecificBikePath = mapOf(
+            "highway" to "secondary",
+            "cycleway:right" to "track",
+            "segregated" to "yes",
+            "@id" to "26852578",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+        val targets = SimplifiedBikeInfrastructure.entries.filter {
+            it != SimplifiedBikeInfrastructure.BICYCLE_WAY
+        }
+
+        return targets.map { to ->
+            DynamicTest.dynamicTest("BICYCLE_WAY (cycleway:right=track) → $to") {
+                assertDoesNotThrow {
+                    RadSimDeltaEngine.computeDelta(
+                        currentTags = sideSpecificBikePath,
+                        key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                        value = to.value
+                    )
+                }
+            }
+        }
+    }
+
+    @TestFactory
     fun `to NO should not stall when way has cycleway infra tags`(): List<DynamicTest> {
         // Every ->NO rule must remove all cycleway tags, otherwise the
         // hasExplicitBikeInfrastructure guard skips isService() and the way
@@ -258,4 +441,39 @@ class BackMappingMatrixTest {
             SimplifiedBikeInfrastructure.NO ->
                 emptyMap() // NO has no signature
         }
+
+    /**
+     * Apply a back-mapping delta to a tag set, the same way the caller of the engine does.
+     * An empty value means the caller must remove the tag.
+     */
+    private fun apply(tags: Map<String, Any>, delta: Set<OsmTag>): Map<String, Any> {
+        val updated = tags.toMutableMap()
+        delta.forEach { tag ->
+            val value = tag.value
+            if (value is String && value.isEmpty()) updated.remove(tag.key) else updated[tag.key] = value
+        }
+        return updated
+    }
+
+    companion object {
+        /**
+         * Tags of way 26852577 in Muenster, which stalled the back-mapping. [BIK-2092]
+         */
+        private val SEGREGATED_DESIGNATED_PATH = mapOf(
+            "highway" to "path",
+            "bicycle" to "designated",
+            "foot" to "designated",
+            "segregated" to "yes",
+            "cycleway:surface" to "paving_stones",
+            "cycleway:width" to "1.2",
+            "footway:surface" to "paving_stones",
+            "surface" to "paving_stones",
+            "lcn" to "yes",
+            "oneway" to "yes",
+            "@id" to "26852577",
+            "base_id" to "1",
+            "type" to "segment",
+            "segment_length" to "10",
+        )
+    }
 }
