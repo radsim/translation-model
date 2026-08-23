@@ -67,7 +67,15 @@ class BackMappingRulesTest {
 
     @Test
     fun `R8 - bicycle_way to bicycle_lane`() {
-        val expected = tags("highway" to "secondary", "cycleway" to "lane")
+        // The rule also clears the path signature, so the way cannot stay BICYCLE_WAY. [BIK-2092]
+        val expected = tags(
+            "highway" to "secondary",
+            "cycleway" to "lane",
+            "segregated" to "",
+            "cycleway:right" to "",
+            "cycleway:left" to "",
+            "cycleway:both" to "",
+        )
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.BICYCLE_WAY,
             SimplifiedBikeInfrastructure.BICYCLE_LANE,

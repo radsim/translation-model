@@ -31,6 +31,18 @@ object BackMappingRules {
         OsmTag("cycleway:both", ""),
     )
 
+    /**
+     * Side-specific cycleway tags, without the bare `cycleway` key.
+     *
+     * A rule which sets the bare `cycleway` key must remove these. A surviving
+     * `cycleway:right=track` contradicts the new value and keeps `isBikePathRight` true. [BIK-2092]
+     */
+    private val REMOVE_SIDE_CYCLEWAY_TAGS = setOf(
+        OsmTag("cycleway:right", ""),
+        OsmTag("cycleway:left", ""),
+        OsmTag("cycleway:both", ""),
+    )
+
     private val rules: Map<RuleKey, (Map<String, Any>) -> Set<OsmTag>> = mapOf(
 
         // -------------------------------------------------------------------
@@ -127,11 +139,24 @@ object BackMappingRules {
         RuleKey(BICYCLE_WAY, BICYCLE_ROAD) to { _ ->
             setOf(OsmTag("highway", "residential"), OsmTag("bicycle_road", "yes"))
         },
+        // A lane and a bus lane are markings on the carriageway. The way therefore stops being a
+        // path, so the delta must also clear the path signature. `bicycleWayRight`/`bicycleWayLeft`
+        // still match `bicycle=designated` + `foot=designated` + `segregated=yes`, and they still
+        // match a side-specific `cycleway:right=track`. Without the removals the category never
+        // changes and the engine stalls, which aborts the whole base net job. [BIK-2092]
         RuleKey(BICYCLE_WAY, BICYCLE_LANE) to { _ ->
-            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "lane"))
+            setOf(
+                OsmTag("highway", "secondary"),
+                OsmTag("cycleway", "lane"),
+                OsmTag("segregated", ""),
+            ) + REMOVE_SIDE_CYCLEWAY_TAGS
         },
         RuleKey(BICYCLE_WAY, BUS_LANE) to { _ ->
-            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "share_busway"))
+            setOf(
+                OsmTag("highway", "secondary"),
+                OsmTag("cycleway", "share_busway"),
+                OsmTag("segregated", ""),
+            ) + REMOVE_SIDE_CYCLEWAY_TAGS
         },
         RuleKey(BICYCLE_WAY, MIXED_WAY) to { tags ->
             when (tags["highway"]) {

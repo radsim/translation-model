@@ -93,7 +93,15 @@ class SimplifiedBikeInfrastructureTest {
             current
         )
         assertEquals(
-            setOf(OsmTag("highway", "secondary"), OsmTag("cycleway", "lane")),
+            setOf(
+                OsmTag("highway", "secondary"),
+                OsmTag("cycleway", "lane"),
+                // Clear the path signature, otherwise the way stays BICYCLE_WAY. [BIK-2092]
+                OsmTag("segregated", ""),
+                OsmTag("cycleway:right", ""),
+                OsmTag("cycleway:left", ""),
+                OsmTag("cycleway:both", ""),
+            ),
             result
         )
     }
