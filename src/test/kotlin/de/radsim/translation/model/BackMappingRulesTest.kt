@@ -71,10 +71,15 @@ class BackMappingRulesTest {
         val expected = tags(
             "highway" to "secondary",
             "cycleway" to "lane",
+            "bicycle" to "",
+            "foot" to "",
             "segregated" to "",
             "cycleway:right" to "",
             "cycleway:left" to "",
             "cycleway:both" to "",
+            "cycleway:right:bicycle" to "",
+            "cycleway:left:bicycle" to "",
+            "cycleway:both:bicycle" to "",
         )
         val actual = BackMappingRules.applyRule(
             SimplifiedBikeInfrastructure.BICYCLE_WAY,

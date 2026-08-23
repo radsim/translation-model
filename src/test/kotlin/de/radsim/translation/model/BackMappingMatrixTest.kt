@@ -238,6 +238,104 @@ class BackMappingMatrixTest {
     }
 
     @TestFactory
+    fun `designated path variants should back-map to a carriageway marking`(): List<DynamicTest> {
+        // [BIK-2092] The first fix removed the bare `segregated` key only. Three classifier
+        // predicates read more than that key, so these variants still stalled:
+        //  - `isSegregated` matches any key which contains "segregated", not the bare key.
+        //  - `isObligatedSegregated` reads traffic sign 241 and ignores `segregated`.
+        //  - `isBikePathRight` matches a key which contains "right:bicycle".
+        // The rules therefore also drop `bicycle` and `foot`, which every one of those
+        // paths needs. The backend filters the side-specific keys today
+        // (RadSimToOsmTagMerger.filter), but the library must not depend on that.
+        val variants = mapOf(
+            "sidewalk:both:segregated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "sidewalk:both:segregated" to "yes",
+            ),
+            "cycleway:right:segregated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "cycleway:right:segregated" to "yes",
+            ),
+            "traffic_sign 241" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "traffic_sign" to "241",
+            ),
+            "traffic_sign:forward 237;241" to mapOf(
+                "highway" to "track",
+                "bicycle" to "designated",
+                "foot" to "designated",
+                "traffic_sign:forward" to "237;241",
+            ),
+            "cycleway:right:bicycle designated" to mapOf(
+                "highway" to "path",
+                "bicycle" to "designated",
+                "cycleway:right:bicycle" to "designated",
+            ),
+        )
+        val targets = listOf(SimplifiedBikeInfrastructure.BICYCLE_LANE, SimplifiedBikeInfrastructure.BUS_LANE)
+
+        return variants.flatMap { (name, tags) ->
+            targets.map { to ->
+                DynamicTest.dynamicTest("$name → $to") {
+                    val context = tags + mapOf(
+                        "@id" to "26852579",
+                        "base_id" to "1",
+                        "type" to "segment",
+                        "segment_length" to "10",
+                    )
+                    val delta = RadSimDeltaEngine.computeDelta(
+                        currentTags = context,
+                        key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                        value = to.value
+                    )
+                    assertEquals(to, BikeInfrastructure.toRadSim(apply(context, delta)).simplified)
+                }
+            }
+        }
+    }
+
+    @TestFactory
+    fun `traffic sign 241 should back-map to a carriageway marking from every category`(): List<DynamicTest> {
+        // [BIK-2092] BICYCLE_ROAD and CYCLE_HIGHWAY reach BICYCLE_LANE through an intermediate
+        // BICYCLE_WAY state, so they stalled on the same leftover traffic sign.
+        val sources = mapOf(
+            SimplifiedBikeInfrastructure.BICYCLE_ROAD to mapOf("bicycle_road" to "yes"),
+            SimplifiedBikeInfrastructure.CYCLE_HIGHWAY to mapOf("cycle_highway" to "yes"),
+        )
+        val targets = listOf(SimplifiedBikeInfrastructure.BICYCLE_LANE, SimplifiedBikeInfrastructure.BUS_LANE)
+
+        return sources.flatMap { (from, signature) ->
+            targets.map { to ->
+                DynamicTest.dynamicTest("$from (traffic_sign=241) → $to") {
+                    val context = signature + mapOf(
+                        "highway" to "path",
+                        "bicycle" to "designated",
+                        "foot" to "designated",
+                        "traffic_sign" to "241",
+                        "@id" to "26852580",
+                        "base_id" to "1",
+                        "type" to "segment",
+                        "segment_length" to "10",
+                    )
+                    assertDoesNotThrow {
+                        RadSimDeltaEngine.computeDelta(
+                            currentTags = context,
+                            key = SimplifiedBikeInfrastructure.RADSIM_TAG,
+                            value = to.value
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @TestFactory
     fun `side specific bike path should back-map to all categories without stall`(): List<DynamicTest> {
         // [BIK-2092] A side-specific `cycleway:right=track` also makes `isBikePathRight` true.
         // The BICYCLE_WAY -> BICYCLE_LANE rule sets the bare `cycleway` key only, so the

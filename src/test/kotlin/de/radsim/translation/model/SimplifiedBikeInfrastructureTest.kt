@@ -97,10 +97,15 @@ class SimplifiedBikeInfrastructureTest {
                 OsmTag("highway", "secondary"),
                 OsmTag("cycleway", "lane"),
                 // Clear the path signature, otherwise the way stays BICYCLE_WAY. [BIK-2092]
+                OsmTag("bicycle", ""),
+                OsmTag("foot", ""),
                 OsmTag("segregated", ""),
                 OsmTag("cycleway:right", ""),
                 OsmTag("cycleway:left", ""),
                 OsmTag("cycleway:both", ""),
+                OsmTag("cycleway:right:bicycle", ""),
+                OsmTag("cycleway:left:bicycle", ""),
+                OsmTag("cycleway:both:bicycle", ""),
             ),
             result
         )
