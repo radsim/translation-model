@@ -26,29 +26,40 @@ on:
   push:
     branches:
       - main
+      - 'release-*'
   pull_request:
     branches:
       - main
+      - 'release-*'
 
-# Fallback: explicit workflow permissions (as little as required)
+# Explicit workflow permissions (as little as required)
 permissions:
   contents: read    # no private packages needed
 
+# A new commit on a pull request stops the run of the previous commit
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
-    # Only for pushes (assumes protected main branch) and for PRs from this repo (not from forks)
+    # Only for pushes (assumes protected branches) and for PRs from this repo (not from forks)
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
+        with:
+          # Do not keep the token on the runner after the checkout, where build scripts and dependencies can read it
+          persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: 17
+          cache: 'gradle'
 
       - name: Build with Gradle
         run: ./gradlew build

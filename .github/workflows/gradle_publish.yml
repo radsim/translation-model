@@ -20,13 +20,16 @@
 # This workflow publishes a new version to the GitHub Registry.
 #
 # @author Armin Schnabel
+#
+# NOTE: An organization-wide cleanup deletes old versions of the published packages each week.
+# See `.github/workflows/registry_cleanup.yml` in the repository `radsim/production`.
 name: Gradle Publish
 
 on:
   push:
     tags:
-      - '[0-9]*.[0-9]*.[0-9]*' # glob not reg-ex
-      - '[0-9]*.[0-9]*.[0-9]*-*'
+      # GitHub filter pattern, not a reg-ex: `+` means one or more of the previous character, `*` means any text
+      - '[0-9]+.[0-9]+.[0-9]+*'
 
 # Explicit workflow permissions
 permissions:
@@ -36,14 +39,21 @@ permissions:
 jobs:
   publish:
     # No if-protection needed: write permission needed to push tags, not allowed for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
+
+    env:
+      # Never use `github.ref_name` directly in a script: a tag name can contain shell commands
+      TAG: ${{ github.ref_name }}
 
     steps:
       - name: Checkout commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+        with:
+          # Do not keep the write token on the runner after the checkout, where build scripts and dependencies can read it
+          persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: 17
@@ -51,7 +61,7 @@ jobs:
       # version is required to publish artifacts to GitHub Registry
       - name: Set version
         run: |
-          sed -i "s/version = \"0.0.0\"/version = \"${{ github.ref_name }}\"/g" build.gradle.kts
+          sed -i "s/version = \"0.0.0\"/version = \"$TAG\"/g" build.gradle.kts
 
       # Publish slim JARS to GitHub Package Registry
       - name: Publish package
@@ -60,13 +70,16 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      # Automatically mark this tag as release on GitHub (requires actions/checkout@v6)
+      # Automatically mark this tag as release on GitHub. The message of the tag, without its first line, becomes the release notes.
       - name: Mark tag as release on Github
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --notes "$(git tag -l --format='%(contents)' "${{ github.ref_name }}")" \
-            ${{ (contains(github.ref, 'test') || contains(github.ref, 'alpha') || contains(github.ref, 'beta')) && '--prerelease' || '' }}
+          # A tag with a suffix, for example `1.2.3-beta1`, is a pre-release
+          case "$TAG" in *-*) PRERELEASE=--prerelease ;; *) PRERELEASE= ;; esac
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "$(git tag -l --format='%(contents:body)' "$TAG")" \
+            $PRERELEASE
         env:
+          # `gh` reads these variables: the token for the login, the repository which gets the release
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
