@@ -17,33 +17,18 @@
  *  along with the RadSim Translation Model.  If not, see <http://www.gnu.org/licenses/>.
  */
 import io.gitlab.arturbosch.detekt.Detekt
-import org.jetbrains.dokka.base.DokkaBase
-import org.jetbrains.dokka.base.DokkaBaseConfiguration
-import org.jetbrains.dokka.gradle.DokkaTask
 /**
  * The build gradle file for the RadSim Translation Model.
  *
  * @author Armin Schnabel
  */
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.jetbrains.dokka:dokka-base:1.9.0")
-    }
-}
-
 plugins {
     id("idea")
-    // Plugin to display the Gradle task graph
-    id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
     id("maven-publish")
-    kotlin("jvm").version("2.1.20")
+    kotlin("jvm").version("2.4.21")
 
-    id("io.gitlab.arturbosch.detekt").version("1.23.1")
-    id("org.jetbrains.dokka").version("1.9.10")
+    id("io.gitlab.arturbosch.detekt").version("1.23.8")
 }
 
 group = "de.radsim"
@@ -51,18 +36,18 @@ version = "0.0.0" // Automatically overwritten by CI
 
 // --- Dependency Versions ---
 
-extra["gradleWrapperVersion"] = "7.6.1"
-extra["cyfaceSerializationVersion"] = "4.1.11"
-extra["logbackVersion"] = "1.5.13"
+extra["gradleWrapperVersion"] = "9.8.2"
+extra["kotlinVersion"] = "2.4.21"
+extra["cyfaceSerializationVersion"] = "6.0.0"
+extra["logbackVersion"] = "1.6.6"
 
 // Versions of testing dependencies
-extra["junitVersion"] = "5.9.2"
-extra["mockitoKotlinVersion"] = "5.1.0"
-extra["hamcrestVersion"] = "2.2"
+extra["junitVersion"] = "6.1.3"
+extra["mockitoKotlinVersion"] = "6.4.0"
+extra["hamcrestVersion"] = "3.0"
 
 // Versions of Code management dependencies
-extra["dokkaVersion"] = "1.9.10"
-extra["detektVersion"] = "1.23.1"
+extra["detektVersion"] = "1.23.8"
 
 
 // --- plugin configurations
@@ -93,7 +78,7 @@ tasks.test {
 
 dependencies {
     // Kotlin Support
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:${project.extra["kotlinVersion"]}")
 
     // Cyface Dependencies
     implementation("de.cyface:model:${project.extra["cyfaceSerializationVersion"]}") // OsmTag class, mm-output
@@ -109,11 +94,9 @@ dependencies {
     testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${project.extra["mockitoKotlinVersion"]}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.22")
-
-    // Required to create inline documentation
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:${project.extra["dokkaVersion"]}")
-    dokkaHtmlPlugin("org.jetbrains.dokka:dokka-base:${project.extra["dokkaVersion"]}")
+    // Gradle 9 no longer adds the launcher automatically
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:${project.extra["kotlinVersion"]}")
 
     // Required for Linting - Enables the corresponding sections in config/detekt.yml
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${project.extra["detektVersion"]}")
@@ -140,7 +123,7 @@ publishing {
         }
         maven {
             name = "local"
-            url = uri("file://${rootProject.buildDir}/repo")
+            url = uri(rootProject.layout.buildDirectory.dir("repo"))
         }
     }
 }
@@ -149,7 +132,7 @@ publishing {
 repositories {
     maven {
         name = "local"
-        url = uri("file://${rootProject.buildDir}/repo")
+        url = uri(rootProject.layout.buildDirectory.dir("repo"))
     }
     mavenCentral()
     maven {
@@ -160,23 +143,6 @@ repositories {
             password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String?
         }
     }
-}
-
-tasks.withType<DokkaTask>().configureEach {
-    outputDirectory.set(buildDir.resolve("doc/"))
-    pluginConfiguration<DokkaBase, DokkaBaseConfiguration> {
-        footerMessage = "(c) 2023-2024 Cyface gmbH"
-    }
-    // TODO: This is not working
-    /*dokkaSourceSets {
-        named("main") {
-            includes.from("README.md")
-            sourceLink {
-                localDirectory.set(file("src/main/kotlin"))
-                remoteUrl.set(URL("https://github.com/radsim/backend/build/dokka/"))
-            }
-        }
-    }*/
 }
 
 // Begin detekt configuration

@@ -61,16 +61,15 @@ The category `NO` must never have `highway=cycleway` (BIK-1440).
 
 ### Development Commands
 
-The build uses Kotlin 2.1.20 with the JVM toolchain 17. `OsmTag` comes from `de.cyface:model` (Cyface serialization).
+The build uses Kotlin 2.4.21 with the JVM toolchain 17. `OsmTag` comes from `de.cyface:model` (Cyface serialization).
 
 ```bash
 ./gradlew build                          # Build and test
 ./gradlew test --tests "BikeInfrastructureTest"  # Single test class
 ./gradlew detekt                         # Static analysis
-./gradlew dokkaHtml                      # Documentation
 ```
 
-The tests are parameterized JUnit 5 tests (`@ParameterizedTest` with `@MethodSource`) with Hamcrest matchers. Mark the test cases of a bug with the ticket ID, for example `[BIK-1478]`.
+The tests are parameterized JUnit 6 tests (`@ParameterizedTest` with `@MethodSource`) with Hamcrest matchers. Mark the test cases of a bug with the ticket ID, for example `[BIK-1478]`.
 
 ### GitHub Workflows
 
