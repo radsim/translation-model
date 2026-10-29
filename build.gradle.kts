@@ -38,7 +38,7 @@ version = "0.0.0" // Automatically overwritten by CI
 
 extra["gradleWrapperVersion"] = "9.8.2"
 extra["kotlinVersion"] = "2.4.21"
-extra["cyfaceSerializationVersion"] = "6.0.0"
+extra["cyfaceSerializationVersion"] = "6.1.0"
 extra["logbackVersion"] = "1.6.6"
 
 // Versions of testing dependencies
